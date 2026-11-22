@@ -34,5 +34,20 @@ const Store = (() => {
     get routines() { return data.routines; },
     get sessions() { return data.sessions; },
     save,
+
+    getRoutine(routineId) {
+      return data.routines.find(r => r.id === routineId);
+    },
+    // Adds a new routine, or replaces the existing one with the same id.
+    saveRoutine(routine) {
+      const i = data.routines.findIndex(r => r.id === routine.id);
+      if (i >= 0) data.routines[i] = routine;
+      else data.routines.push(routine);
+      save();
+    },
+    deleteRoutine(routineId) {
+      data.routines = data.routines.filter(r => r.id !== routineId);
+      save();
+    },
   };
 })();

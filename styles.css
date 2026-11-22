@@ -103,3 +103,110 @@ html, body {
   padding: 16px;
   margin-bottom: 12px;
 }
+
+.muted { color: var(--muted); }
+.small { font-size: 0.85rem; }
+a.btn { text-decoration: none; }
+
+/* Text boxes. 17px text stops iPhones from zooming in when you tap one. */
+input {
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+}
+input:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+input::placeholder { color: var(--muted); }
+
+.field { display: block; margin-bottom: 8px; }
+.field span { display: block; color: var(--muted); font-size: 0.85rem; margin-bottom: 6px; }
+.hint { margin: 0 0 16px; }
+
+/* Routine list */
+.routine-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: inherit;
+  text-decoration: none;
+}
+.routine-card > div { flex: 1; min-width: 0; }
+.routine-name { font-weight: 600; font-size: 1.1rem; margin-bottom: 4px; }
+.routine-card .small { margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chevron { color: var(--muted); font-size: 1.6rem; }
+
+/* Routine editor */
+.ex-head { display: flex; gap: 6px; align-items: center; margin-bottom: 12px; }
+.ex-name { flex: 1; font-weight: 600; }
+
+.icon-btn {
+  flex: none;
+  width: 40px; height: 40px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 1.2rem;
+  cursor: pointer;
+}
+.icon-btn:disabled { opacity: 0.25; }
+
+.seg {
+  display: flex;
+  background: var(--surface-2);
+  border-radius: 10px;
+  padding: 3px;
+  margin-bottom: 12px;
+}
+.seg button {
+  flex: 1;
+  min-height: 36px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.seg button.on { background: var(--bg); color: var(--text); font-weight: 600; }
+
+.set-row {
+  display: grid;
+  grid-template-columns: 44px 1fr 1fr 40px;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.set-row.timed { grid-template-columns: 44px 1fr 40px; }
+.set-row.head { color: var(--muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px; }
+.set-row.head span { text-align: center; }
+.set-row input { text-align: center; }
+
+.set-tag {
+  height: 44px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.set-tag.warm { background: #4a3a12; color: #fbbf24; }
+
+.link-btn {
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  font-weight: 600;
+  padding: 8px 0 0;
+  cursor: pointer;
+}
+
+.editor-actions { display: grid; gap: 10px; margin-top: 24px; }
