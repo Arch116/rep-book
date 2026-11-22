@@ -212,14 +212,6 @@ function saveDraft() {
 
 /* ---------- Placeholder screens ---------- */
 
-function renderWorkout() {
-  titleEl.textContent = 'Workout';
-  viewEl.innerHTML = `
-    <div class="empty">
-      <p>Start a workout from one of your routines.<br>(Coming in step 3)</p>
-    </div>`;
-}
-
 function renderHistory() {
   titleEl.textContent = 'History';
   viewEl.innerHTML = `
@@ -247,4 +239,5 @@ function route() {
 }
 
 window.addEventListener('hashchange', route);
-route();
+// Wait until every script file has loaded (workout.js comes after this one).
+window.addEventListener('DOMContentLoaded', route);

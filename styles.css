@@ -210,3 +210,144 @@ input::placeholder { color: var(--muted); }
 }
 
 .editor-actions { display: grid; gap: 10px; margin-top: 24px; }
+
+textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+  resize: vertical;
+}
+textarea:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+
+/* Workout tab */
+button.routine-card {
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+.start-pill {
+  flex: none;
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-text);
+  font-weight: 600;
+}
+
+.toast {
+  background: #12301c;
+  border: 1px solid #1f5c35;
+  color: var(--accent);
+  border-radius: var(--radius);
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  font-weight: 600;
+}
+
+.session-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.chip {
+  flex: none;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.ex-title { font-weight: 600; font-size: 1.1rem; }
+.last-line { margin: 4px 0 12px; }
+
+.log-row {
+  display: grid;
+  grid-template-columns: 36px 62px 1fr 1fr 44px;
+  gap: 6px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.log-row.timed { grid-template-columns: 36px 62px 1fr 44px; }
+.log-row.head { color: var(--muted); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px; }
+.log-row.head span { text-align: center; }
+.log-row input { text-align: center; padding: 8px 4px; }
+.log-row .target { color: var(--muted); font-size: 0.8rem; text-align: center; }
+.set-tag.static {
+  display: flex; align-items: center; justify-content: center;
+  height: 44px; border-radius: 10px;
+  background: var(--surface-2); font-weight: 600; cursor: default;
+}
+
+.check {
+  height: 44px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: 1.2rem;
+  cursor: pointer;
+}
+.check.on { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+.log-row.done input { border-color: #1f5c35; background: #12301c; }
+
+.ex-note { margin-top: 10px; font-size: 0.9rem; min-height: 40px; }
+
+/* Rest timer bar: sits just above the tab bar. */
+.rest-bar {
+  position: fixed;
+  left: 12px; right: 12px;
+  bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom) + 10px);
+  max-width: 616px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 8px 8px 16px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  z-index: 20;
+}
+.rest-bar[hidden] { display: none; }
+.rest-bar .rest-time { flex: 1; font-weight: 700; font-variant-numeric: tabular-nums; }
+.rest-bar button {
+  min-height: 40px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+.rest-bar.over { background: var(--accent); border-color: var(--accent); }
+.rest-bar.over .rest-time { color: var(--accent-text); }
+
+/* Extra room at the bottom so the rest bar never covers the last buttons. */
+.view { padding-bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom) + 96px); }
+
+/* Dot on the Workout tab while a workout is in progress. */
+.tabbar a { position: relative; }
+.tabbar a.live::after {
+  content: "";
+  position: absolute;
+  top: 10px;
+  left: calc(50% + 12px);
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+}

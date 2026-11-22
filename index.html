@@ -29,7 +29,15 @@
     </a>
   </nav>
 
+  <div id="rest-bar" class="rest-bar" hidden role="timer" aria-live="polite">
+    <span class="rest-time"></span>
+    <button data-rest="-15" aria-label="15 seconds less">−15</button>
+    <button data-rest="15" aria-label="15 seconds more">+15</button>
+    <button data-rest="skip">Skip</button>
+  </div>
+
   <script src="store.js"></script>
   <script src="app.js"></script>
+  <script src="workout.js"></script>
 </body>
 </html>
