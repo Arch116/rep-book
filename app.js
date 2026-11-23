@@ -216,11 +216,12 @@ function saveDraft() {
 
 function route({ keepScroll = false } = {}) {
   const [tab, param, extra] = location.hash.replace('#/', '').split('/');
-  const name = ['routines', 'workout', 'history', 'account'].includes(tab) ? tab : 'routines';
+  const name = ['home', 'routines', 'workout', 'history', 'account'].includes(tab) ? tab : 'home';
 
   if (!(name === 'routines' && param)) draft = null; // leaving the editor discards the draft
 
-  if (name === 'routines' && param) openEditor(param);
+  if (name === 'home') renderHome();
+  else if (name === 'routines' && param) openEditor(param);
   else if (name === 'routines') renderRoutineList();
   else if (name === 'workout') renderWorkout();
   else if (name === 'account') renderAccount();

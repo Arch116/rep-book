@@ -198,7 +198,11 @@ viewEl.addEventListener('click', e => {
   const btn = e.target.closest('[data-w-action]');
   if (!btn) return;
   const action = btn.dataset.wAction;
-  if (action === 'start') return startWorkout(btn.dataset.id);
+  if (action === 'start') {
+    startWorkout(btn.dataset.id);
+    if (!location.hash.startsWith('#/workout')) location.hash = '#/workout'; // started from Home
+    return;
+  }
 
   const s = Store.active;
   if (!s) return;

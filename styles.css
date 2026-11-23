@@ -473,3 +473,10 @@ select {
 /* App name with the dumbbell mark (same drawing as the home-screen icon). */
 .brand { display: flex; align-items: center; gap: 10px; }
 .brand-mark { width: 30px; height: 30px; flex: none; fill: none; stroke: var(--accent); stroke-width: 36; stroke-linecap: round; }
+
+/* Home screen */
+.home-hero { display: block; color: inherit; text-decoration: none; }
+.home-hero-name { font-size: 1.6rem; font-weight: 700; margin: 4px 0 2px; }
+.home-hero .btn { margin-top: 14px; }
+.home-other { display: block; text-align: center; margin: 10px auto 0; }
+.home-best { color: var(--accent); font-weight: 700; white-space: nowrap; }

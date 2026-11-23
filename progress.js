@@ -61,16 +61,24 @@ function seriesFor(h) {
   ];
 }
 
+// How good one workout's result for an exercise was (higher = better).
+function pointScore(h, p) {
+  return h.type === 'time' ? (p.top.seconds || 0)
+    : h.type === 'bodyweight' ? p.maxAdded * 1000 + p.maxReps
+    : (p.top.weight || 0) * 1000 + (p.top.reps || 0);
+}
+// e.g. "8 × 155", "12 reps / +25", "60s"
+function pointText(h, p) {
+  return h.type === 'bodyweight'
+    ? `${p.maxReps} reps${p.maxAdded ? ` / +${p.maxAdded}` : ''}`
+    : fmtSet(h.type, p.top);
+}
+
 function statTiles(h) {
   const pts = h.points;
   const latest = pts[pts.length - 1];
-  const scoreOf = p => h.type === 'time' ? (p.top.seconds || 0)
-    : h.type === 'bodyweight' ? p.maxAdded * 1000 + p.maxReps
-    : (p.top.weight || 0) * 1000 + (p.top.reps || 0);
-  const best = pts.reduce((b, p) => (scoreOf(p) > scoreOf(b) ? p : b), pts[0]);
-  const fmtTop = p => h.type === 'bodyweight'
-    ? `${p.maxReps} reps${p.maxAdded ? ` / +${p.maxAdded}` : ''}`
-    : fmtSet(h.type, p.top);
+  const best = pts.reduce((b, p) => (pointScore(h, p) > pointScore(h, b) ? p : b), pts[0]);
+  const fmtTop = p => pointText(h, p);
   return `
     <div class="stats">
       <div class="stat"><div class="stat-label">Best</div><div class="stat-value">${fmtTop(best)}</div><div class="muted small">${shortDate(best.date)}</div></div>

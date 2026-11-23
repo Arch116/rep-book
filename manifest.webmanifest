@@ -2,7 +2,7 @@
   "name": "Rep Book",
   "short_name": "Rep Book",
   "description": "Plan routines, log workouts and track progress.",
-  "start_url": "./#/workout",
+  "start_url": "./#/home",
   "scope": "./",
   "display": "standalone",
   "background_color": "#00142e",
