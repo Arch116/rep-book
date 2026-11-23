@@ -215,7 +215,7 @@ function saveDraft() {
 /* ---------- Router ---------- */
 
 function route() {
-  const [tab, param] = location.hash.replace('#/', '').split('/');
+  const [tab, param, extra] = location.hash.replace('#/', '').split('/');
   const name = ['routines', 'workout', 'history'].includes(tab) ? tab : 'routines';
 
   if (!(name === 'routines' && param)) draft = null; // leaving the editor discards the draft
@@ -223,7 +223,7 @@ function route() {
   if (name === 'routines' && param) openEditor(param);
   else if (name === 'routines') renderRoutineList();
   else if (name === 'workout') renderWorkout();
-  else renderHistory(param);
+  else renderHistory(param, extra);
 
   document.querySelectorAll('.tabbar a').forEach(a =>
     a.classList.toggle('active', a.dataset.tab === name));

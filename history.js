@@ -29,13 +29,14 @@ function volume(session) {
     .reduce((sum, s) => sum + (s.reps || 0) * (s.weight || 0), 0);
 }
 
-function renderHistory(sessionId) {
+function renderHistory(sessionId, extra) {
+  if (sessionId === 'progress') return renderProgress(extra);
   if (sessionId) return renderSessionDetail(sessionId);
   titleEl.textContent = 'History';
 
   const sessions = [...Store.sessions].sort((a, b) => b.startedAt.localeCompare(a.startedAt));
   if (!sessions.length) {
-    viewEl.innerHTML = `
+    viewEl.innerHTML = `${historySwitch('workouts')}
       <div class="empty">
         <p>No workouts yet.<br>Finish a workout and it will show up here.</p>
         <a class="btn" href="#/workout">Start a workout</a>
@@ -43,7 +44,7 @@ function renderHistory(sessionId) {
     return;
   }
 
-  let html = '';
+  let html = historySwitch('workouts');
   let month = '';
   for (const s of sessions) {
     const m = monthLabel(s.startedAt);
