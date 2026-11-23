@@ -26,6 +26,9 @@ const Sync = (() => {
 
   function safeGet(k) { try { return localStorage.getItem(k); } catch { return null; } }
   function safeSet(k, v) { try { localStorage.setItem(k, v); } catch {} }
+  // Whose account the data on this device belongs to, so one person's data
+  // never gets merged into someone else's account on a shared device.
+  const OWNER_KEY = 'workout-owner';
 
   function setStatus(s) {
     status = s;
@@ -89,6 +92,11 @@ const Sync = (() => {
         .from('app_data').select('data').eq('user_id', user.id).maybeSingle();
       if (error) throw error;
 
+      // This device holds someone else's data (they didn't sign out cleanly):
+      // drop it rather than mixing it into this account.
+      const owner = safeGet(OWNER_KEY);
+      if (owner && owner !== user.id) Store.clearLocal();
+
       const local = Store.getData();
       const merged = row ? merge(local, row.data || {}) : local;
 
@@ -106,6 +114,7 @@ const Sync = (() => {
       }
       lastSynced = Date.now();
       safeSet('workout-last-synced', String(lastSynced));
+      safeSet(OWNER_KEY, user.id);
       setStatus('synced');
     } catch (err) {
       console.warn('Sync failed:', err);
@@ -166,9 +175,17 @@ const Sync = (() => {
       if (error) return { error: error.message };
       return { needsConfirm: !data.session };
     },
-    async signOut() {
+    // Saves your latest changes online, signs out, and removes this device's
+    // copy. If saving fails it stops (returns { unsynced: true }) unless forced.
+    async signOut({ force = false } = {}) {
       await syncNow();
-      await client.auth.signOut();
+      if (status !== 'synced' && !force) return { unsynced: true };
+      await client.auth.signOut({ scope: 'local' }); // just this device; your phone stays signed in
+      Store.clearLocal();
+      try { localStorage.removeItem(OWNER_KEY); } catch {}
+      lastSynced = null;
+      window.onSyncedData?.();
+      return {};
     },
   };
 })();

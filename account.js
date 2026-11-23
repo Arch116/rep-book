@@ -217,7 +217,7 @@ function drawAccount() {
       <button class="btn secondary block" data-a-action="sync">Sync now</button>
       <button class="btn danger block" data-a-action="signout">Sign out</button>
     </div>
-    <p class="muted small hint">Signing out keeps a copy of your data on this device.</p>`;
+    <p class="muted small hint">Signing out removes this device's copy. Everything stays in your account and comes back when you sign in.</p>`;
 }
 
 viewEl.addEventListener('submit', async e => {
@@ -264,8 +264,16 @@ viewEl.addEventListener('click', async e => {
     if (Sync.status === 'synced') accountMessage = 'All synced.';
     renderAccount();
   } else if (btn.dataset.aAction === 'signout') {
-    if (!confirm('Sign out? Your data stays on this device but stops syncing.')) return;
-    await Sync.signOut();
+    if (!confirm('Sign out? Your data stays safe in your account and comes back when you sign in. This device\'s copy will be removed.')) return;
+    let result = await Sync.signOut();
+    if (result.unsynced) {
+      if (!confirm('Your latest changes couldn\'t be saved online (no connection?). Signing out now would lose them. Sign out anyway?')) {
+        renderAccount();
+        return;
+      }
+      result = await Sync.signOut({ force: true });
+    }
+    accountMessage = 'Signed out. This device\'s copy was removed.';
     renderAccount();
   }
 });

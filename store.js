@@ -88,6 +88,12 @@ const Store = (() => {
     // Used by sync.js.
     getData() { return data; },
     replaceData(next) { data = { ...empty(), ...next }; writeLocal(); },
+    // Removes this device's copy (used when signing out). Your account keeps it.
+    clearLocal() {
+      data = empty();
+      writeLocal();
+      try { localStorage.removeItem('workout-rest-ends'); } catch {}
+    },
     set onChange(fn) { onChange = fn; },
 
     // Body weight log, oldest first.
