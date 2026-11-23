@@ -124,6 +124,10 @@ function exerciseCard(ex, i, count) {
       <div class="set-row head ${isTime ? 'timed' : ''}">${headers}</div>
       ${rows}
       <button class="link-btn" data-action="add-set" data-ex="${i}">+ Add set</button>
+      ${i < count - 1 ? `
+        <button class="toggle-row superset-toggle" data-action="superset" data-ex="${i}" aria-pressed="${!!ex.supersetNext}">
+          <span class="toggle ${ex.supersetNext ? 'on' : ''}" aria-hidden="true"></span>Superset with the next exercise
+        </button>` : ''}
     </div>`;
 }
 
@@ -140,6 +144,7 @@ function renderEditor() {
     <div class="editor-actions">
       <button class="btn block" data-action="save">Save routine</button>
       <a class="btn secondary block" href="#/routines">Cancel</a>
+      ${draftIsNew ? '' : '<button class="btn secondary block" data-action="duplicate">Duplicate routine</button>'}
       ${draftIsNew ? '' : '<button class="btn danger block" data-action="delete-routine">Delete routine</button>'}
     </div>`;
 }
@@ -183,6 +188,18 @@ viewEl.addEventListener('click', e => {
     case 'barbell':
       ex.barbell = !isBarbell(ex);
       break;
+    case 'superset':
+      ex.supersetNext = !ex.supersetNext;
+      break;
+    case 'duplicate': {
+      const copy = { ...structuredClone(draft), id: Store.id(), name: `${draft.name.trim()} (copy)` };
+      draft = copy;
+      draftIsNew = true;
+      history.replaceState(null, '', `#/routines/${copy.id}`);
+      renderEditor();
+      viewEl.querySelector('[data-field="name"]').select();
+      return;
+    }
     case 'add-set': {
       const last = ex.sets[ex.sets.length - 1];
       ex.sets.push({ ...newSet(last), warmup: false }); // copies the last set's numbers

@@ -54,7 +54,7 @@ const Sync = (() => {
     const newer = (x, y) => ((y.updatedAt || '') > (x.updatedAt || '') ? y : x);
 
     const routines = combine(a.routines, b.routines, newer);
-    const sessions = combine(a.sessions, b.sessions, x => x)
+    const sessions = combine(a.sessions, b.sessions, newer) // newer wins (e.g. after a rename)
       .sort((x, y) => x.startedAt.localeCompare(y.startedAt));
 
     const useB = (b.activeChangedAt || '') > (a.activeChangedAt || '');
@@ -67,7 +67,13 @@ const Sync = (() => {
     const settings = (settingsFromB ? b.settings : a.settings) || {};
     const settingsChangedAt = (settingsFromB ? b.settingsChangedAt : a.settingsChangedAt) || null;
 
-    return { routines, sessions, deleted, active: active || null, activeChangedAt, settings, settingsChangedAt };
+    // Pinned exercise notes: newest edit of each note wins.
+    const exerciseNotes = { ...(a.exerciseNotes || {}) };
+    for (const [k, v] of Object.entries(b.exerciseNotes || {})) {
+      if (!exerciseNotes[k] || (v.updatedAt || '') > (exerciseNotes[k].updatedAt || '')) exerciseNotes[k] = v;
+    }
+
+    return { routines, sessions, deleted, active: active || null, activeChangedAt, settings, settingsChangedAt, exerciseNotes };
   }
 
   async function syncNow() {

@@ -91,7 +91,7 @@ function renderSessionDetail(sessionId) {
           : `<span>${set.reps ?? '–'} reps</span><span>${ex.type === 'bodyweight'
               ? (set.weight ? `+${set.weight} lbs` : 'bodyweight')
               : `${set.weight ?? '–'} lbs`}</span>`}
-        <span class="muted small">${set.target ? `target ${fmtSet(ex.type, set.target)}` : ''}</span>
+        <span class="muted small">${[set.target ? `target ${fmtSet(ex.type, set.target)}` : '', set.rpe ? `${10 - set.rpe === 4 ? '4+' : 10 - set.rpe} left` : ''].filter(Boolean).join(' · ')}</span>
       </div>`).join('');
     return `
       <div class="card exercise">

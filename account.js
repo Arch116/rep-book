@@ -72,6 +72,7 @@ function workoutSettingsHTML() {
       ${choices('restAlert', [['sound', 'Sound'], ['vibrate', 'Vibrate'], ['both', 'Both']], st.restAlert, 'When rest is over')}
       <p class="muted small setting-note">iPhones can't vibrate for web apps, and the sound follows your ringer switch. Alerts only play while Rep Book is open.</p>
       ${onOff('keepAwake', st.keepAwake, 'Keep the screen on during a workout')}
+      ${onOff('askEffort', st.askEffort, 'Ask how many reps were left', 'After each set, tap how many more you could have done. Weight suggestions hold off if sets were all-out.')}
     </div>`;
 }
 

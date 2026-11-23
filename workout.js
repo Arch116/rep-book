@@ -83,7 +83,77 @@ function suggestedIncrease(ex, last) {
   if (!st.autoIncrease || ex.type !== 'weight' || !last) return 0;
   const work = last.sets.filter(s => !s.warmup);
   const hitAll = work.length && work.every(s => s.target?.reps && (s.reps ?? 0) >= s.target.reps);
-  return hitAll ? (isLowerBody(ex.name) ? st.incLower : st.incUpper) : 0;
+  // If those sets were all-out (about 0 reps left on average), hold the weight.
+  const rated = work.filter(s => s.rpe);
+  const allOut = rated.length && rated.reduce((sum, s) => sum + s.rpe, 0) / rated.length >= 9.5;
+  return hitAll && !allOut ? (isLowerBody(ex.name) ? st.incLower : st.incUpper) : 0;
+}
+
+// The type an exercise had the last time you did it or planned it.
+function knownType(name) {
+  const key = name.trim().toLowerCase();
+  for (let i = Store.sessions.length - 1; i >= 0; i--) {
+    const hit = Store.sessions[i].exercises.find(e => e.name.trim().toLowerCase() === key);
+    if (hit) return hit.type;
+  }
+  for (const r of Store.routines) {
+    const hit = r.exercises.find(e => e.name.trim().toLowerCase() === key);
+    if (hit) return hit.type;
+  }
+  // Never done or planned: guess from the name.
+  if (/plank|hold|hang|wall sit|carry/i.test(name)) return 'time';
+  if (/push.?up|pull.?up|chin.?up|\bdips?\b|sit.?up|crunch|burpee|leg raise|lunge walk/i.test(name)) return 'bodyweight';
+  return null;
+}
+
+// A new exercise for the workout in progress (from "Swap" or "Add").
+// Uses last time's numbers when you've done it before.
+function sessionExerciseFrom(name, plannedSets, fallbackType) {
+  const type = knownType(name) || fallbackType || 'weight';
+  const base = { id: Store.id(), name, type };
+  const last = Store.lastPerformance(base);
+  const targets = plannedSets?.length ? plannedSets
+    : last ? last.sets.map(x => ({ warmup: x.warmup, reps: x.reps, weight: x.weight, seconds: x.seconds }))
+    : [1, 2, 3].map(() => ({ warmup: false, reps: 8, weight: null, seconds: 60 }));
+  const prev = last ? matchLastSets(last.sets, targets) : [];
+  return {
+    ...base,
+    barbell: isBarbell(base),
+    note: '',
+    last,
+    bump: 0,
+    sets: targets.map((t, i) => ({
+      warmup: t.warmup,
+      target: null,
+      reps: prev[i]?.reps ?? t.reps,
+      weight: prev[i]?.weight ?? (type === 'weight' && plannedSets ? null : t.weight),
+      seconds: prev[i]?.seconds ?? t.seconds,
+      done: false,
+    })),
+  };
+}
+
+// Warm-up sets leading up to the first working set: bar × 10, then about
+// 40%, 60% and 80% of the working weight, rounded to weights you can load.
+function addWarmups(ex) {
+  const work = ex.sets.find(x => !x.warmup);
+  const top = work?.weight;
+  if (!top) return alert('Enter the weight for your first working set first.');
+  const st = Store.settings;
+  const roundTo = 2 * Math.min(...st.plates, 5);
+  const round = w => Math.round(w / roundTo) * roundTo;
+  const steps = [[0, 10], [0.4, 5], [0.6, 3], [0.8, 2]];
+  const weights = [];
+  for (const [pct, reps] of steps) {
+    const w = pct ? round(top * pct) : st.barWeight;
+    if (w >= st.barWeight && w < top && !weights.some(x => x.weight === w)) weights.push({ weight: w, reps });
+  }
+  // Replace any warm-ups you haven't done yet.
+  const keep = ex.sets.filter(x => !x.warmup || x.done);
+  ex.sets = [
+    ...weights.map(w => ({ warmup: true, target: null, reps: w.reps, weight: w.weight, seconds: null, done: false })),
+    ...keep,
+  ];
 }
 
 function startWorkout(routineId) {
@@ -104,6 +174,7 @@ function startWorkout(routineId) {
         name: ex.name,
         type: ex.type,
         barbell: isBarbell(ex),
+        supersetNext: !!ex.supersetNext,
         note: '',
         last, // shown as "Last time: …" while logging; not saved into history
         bump, // extra weight suggested for working sets (0 = none)
@@ -183,7 +254,37 @@ function logRow(ex, exIndex, s, setIndex, workingNumber) {
     </div>`;
 }
 
-function sessionExerciseCard(ex, i) {
+// "Reps left in the tank" after a set: 0 = couldn't do another. Saved as
+// RPE (10 = max effort), the usual way lifters log how hard a set was.
+const RIR_CHOICES = [[6, '4+'], [7, '3'], [8, '2'], [9, '1'], [10, '0']];
+function effortRow(exIndex, setIndex, s) {
+  if (!s.done || !Store.settings.askEffort) return '';
+  return `
+    <div class="effort-row" data-effort-for="${exIndex}-${setIndex}">
+      <span class="muted small">Reps left?</span>
+      ${RIR_CHOICES.map(([rpe, label]) => `
+        <button class="${s.rpe === rpe ? 'on' : ''}" data-w-action="effort" data-ex="${exIndex}" data-set="${setIndex}" data-rpe="${rpe}" aria-pressed="${s.rpe === rpe}">${label}</button>`).join('')}
+    </div>`;
+}
+
+function sessionExerciseCard(ex, i, all) {
+  const prev = all[i - 1], next = all[i + 1];
+  const tools = `
+    <div class="ex-tools">
+      <button class="icon-btn" data-w-action="move" data-dir="-1" data-ex="${i}" ${i === 0 ? 'disabled' : ''} aria-label="Move ${esc(ex.name)} up">↑</button>
+      <button class="icon-btn" data-w-action="move" data-dir="1" data-ex="${i}" ${i === all.length - 1 ? 'disabled' : ''} aria-label="Move ${esc(ex.name)} down">↓</button>
+      <button class="icon-btn" data-w-action="more" data-ex="${i}" aria-expanded="${!!ex.showTools}" aria-label="More options for ${esc(ex.name)}">⋯</button>
+    </div>`;
+
+  if (ex.skipped) {
+    return `
+      <div class="card exercise skipped">
+        <div class="ex-head-row"><div class="ex-title">${esc(ex.name)}</div>
+          <button class="link-btn" data-w-action="skip" data-ex="${i}">Undo skip</button></div>
+        <div class="muted small">Skipped today. It won't be saved.</div>
+      </div>`;
+  }
+
   let working = 0;
   const isTime = ex.type === 'time';
   const lastWork = ex.last ? ex.last.sets.filter(s => !s.warmup) : [];
@@ -191,18 +292,33 @@ function sessionExerciseCard(ex, i) {
     ? `Last time (${shortDate(ex.last.date)}): ${(lastWork.length ? lastWork : ex.last.sets).map(s => fmtSet(ex.type, s)).join(', ')}`
     : 'First time doing this one';
   const bumpLine = ex.bump ? `<div class="bump-line small">↑ +${ex.bump} lbs: you hit every rep last time</div>` : '';
+  const deloadLine = ex.deload ? `<div class="bump-line small">↓ Lighter week: working sets at ${ex.deload}%</div>` : '';
+  const pinned = Store.exerciseNote(ex.name);
+  const pinLine = pinned ? `<button class="pin-note" data-w-action="pin" data-ex="${i}"><span aria-hidden="true">📌</span> ${esc(pinned)}</button>` : '';
+  const superset = ex.supersetNext && next && !next.skipped ? `Superset with ${esc(next.name)}: no rest until after it`
+    : prev?.supersetNext && !prev.skipped ? `Superset with ${esc(prev.name)}` : '';
   const head = isTime
     ? '<span>Set</span><span>Target</span><span>Secs</span><span></span>'
     : `<span>Set</span><span>Target</span><span>Reps</span><span>${ex.type === 'bodyweight' ? '+ lbs' : 'lbs'}</span><span></span>`;
+  const more = ex.showTools ? `
+    <div class="tool-row">
+      <button class="link-btn" data-w-action="swap" data-ex="${i}">Swap exercise</button>
+      <button class="link-btn" data-w-action="skip" data-ex="${i}">Skip today</button>
+      ${ex.type === 'weight' ? `<button class="link-btn" data-w-action="warmups" data-ex="${i}">Add warm-ups</button>` : ''}
+      <button class="link-btn" data-w-action="pin" data-ex="${i}">${pinned ? 'Edit pinned note' : 'Pin a note'}</button>
+    </div>` : '';
   return `
-    <div class="card exercise">
-      <div class="ex-title">${esc(ex.name)}</div>
+    <div class="card exercise ${superset ? 'in-superset' : ''}">
+      ${superset ? `<div class="superset-tag">${superset}</div>` : ''}
+      <div class="ex-head-row"><div class="ex-title">${esc(ex.name)}</div>${tools}</div>
+      ${more}
+      ${pinLine}
       <div class="muted small last-line">${lastLine}</div>
-      ${bumpLine}
+      ${bumpLine}${deloadLine}
       <div class="log-row head ${isTime ? 'timed' : ''}">${head}</div>
-      ${ex.sets.map((s, j) => logRow(ex, i, s, j, s.warmup ? '' : ++working)).join('')}
+      ${ex.sets.map((s, j) => logRow(ex, i, s, j, s.warmup ? '' : ++working) + effortRow(i, j, s)).join('')}
       <button class="link-btn" data-w-action="add-set" data-ex="${i}">+ Add set</button>
-      <input class="ex-note" data-w-field="note" data-ex="${i}" value="${esc(ex.note)}" placeholder="Note (optional)" aria-label="Note for ${esc(ex.name)}">
+      <input class="ex-note" data-w-field="note" data-ex="${i}" value="${esc(ex.note)}" placeholder="Note for today (optional)" aria-label="Note for ${esc(ex.name)}">
     </div>`;
 }
 
@@ -216,7 +332,8 @@ function renderSession(s) {
       </div>
       <button class="chip" data-w-action="rest-cycle" aria-label="Change rest timer">Rest: ${rest ? mmss(rest) : 'off'}</button>
     </div>
-    ${s.exercises.map(sessionExerciseCard).join('')}
+    ${s.exercises.map((ex, i, all) => sessionExerciseCard(ex, i, all)).join('')}
+    <button class="btn secondary block" data-w-action="add-ex">+ Add an exercise</button>
     <label class="field">
       <span>Workout notes</span>
       <textarea data-w-field="notes" rows="3" placeholder="How did it feel? Anything to remember next time?">${esc(s.notes)}</textarea>
@@ -267,12 +384,65 @@ viewEl.addEventListener('click', e => {
       // Update just this row so the page doesn't jump.
       btn.classList.toggle('on', set.done);
       btn.setAttribute('aria-pressed', set.done);
-      btn.closest('.log-row').classList.toggle('done', set.done);
+      const row = btn.closest('.log-row');
+      row.classList.toggle('done', set.done);
+      // Show or hide the "reps left" question under this set.
+      viewEl.querySelector(`[data-effort-for="${btn.dataset.ex}-${btn.dataset.set}"]`)?.remove();
+      if (set.done) row.insertAdjacentHTML('afterend', effortRow(btn.dataset.ex, btn.dataset.set, set));
       unlockSound(); // phones only allow sound that follows a tap
-      const rest = restAfter(set);
+      // In a superset, rest only after the last exercise of the pair.
+      const next = s.exercises[Number(btn.dataset.ex) + 1];
+      const rest = ex.supersetNext && next && !next.skipped ? 0 : restAfter(set);
       if (set.done && rest) restEndsAt = Date.now() + rest * 1000;
       tick();
       return;
+    }
+    case 'effort': {
+      const set = ex.sets[btn.dataset.set];
+      const rpe = Number(btn.dataset.rpe);
+      set.rpe = set.rpe === rpe ? null : rpe;
+      Store.setActive(s);
+      btn.parentElement.querySelectorAll('button').forEach(b => {
+        const on = Number(b.dataset.rpe) === set.rpe;
+        b.classList.toggle('on', on);
+        b.setAttribute('aria-pressed', on);
+      });
+      return;
+    }
+    case 'move': {
+      const i = Number(btn.dataset.ex), j = i + Number(btn.dataset.dir);
+      [s.exercises[i], s.exercises[j]] = [s.exercises[j], s.exercises[i]];
+      break;
+    }
+    case 'more':
+      ex.showTools = !ex.showTools;
+      break;
+    case 'skip':
+      ex.skipped = !ex.skipped;
+      ex.showTools = false;
+      break;
+    case 'swap': {
+      const name = prompt(`Swap ${ex.name} for which exercise?`, '')?.trim();
+      if (!name) return;
+      s.exercises[btn.dataset.ex] = sessionExerciseFrom(name, ex.sets.map(x => ({ ...x, done: false })), ex.type);
+      break;
+    }
+    case 'add-ex': {
+      const name = prompt('Which exercise do you want to add?', '')?.trim();
+      if (!name) return;
+      s.exercises.push(sessionExerciseFrom(name, null, null));
+      break;
+    }
+    case 'warmups':
+      addWarmups(ex);
+      ex.showTools = false;
+      break;
+    case 'pin': {
+      const text = prompt(`Pinned note for ${ex.name} (shows every time you do it). Leave empty to remove.`, Store.exerciseNote(ex.name));
+      if (text === null) return;
+      Store.setExerciseNote(ex.name, text);
+      ex.showTools = false;
+      break;
     }
     case 'step': {
       const set = ex.sets[btn.dataset.set];

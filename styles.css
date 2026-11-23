@@ -537,3 +537,28 @@ select {
 /* Keep the top bar the same size when the text size is bigger. */
 .topbar h1 { font-size: 24px; }
 .sync-badge { font-size: 13px; }
+
+/* Workout: exercise header tools, supersets, effort, pinned notes */
+.ex-head-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.ex-head-row .ex-title { min-width: 0; }
+.ex-tools { display: flex; gap: 2px; flex: none; }
+.tool-row { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 4px 0 6px; }
+.tool-row .link-btn { padding: 6px 0; }
+.card.exercise.skipped { opacity: 0.7; }
+.superset-tag {
+  display: inline-block; margin-bottom: 8px; padding: 3px 10px; border-radius: 999px;
+  background: var(--accent-soft); border: 1px solid var(--accent-line); color: var(--accent); font-size: 0.78rem; font-weight: 600;
+}
+.card.exercise.in-superset { border-color: var(--accent-line); }
+.pin-note {
+  display: block; width: 100%; text-align: left; margin: 6px 0 2px; padding: 8px 10px; border-radius: 10px;
+  background: var(--surface-2); border: 0; color: var(--text); font: inherit; font-size: 0.88rem; cursor: pointer;
+}
+.effort-row { display: flex; align-items: center; gap: 4px; margin: -2px 0 10px; padding-left: 37px; }
+.effort-row .muted { margin-right: 4px; }
+.effort-row button {
+  flex: 1; max-width: 44px; min-height: 32px; border-radius: 8px; border: 1px solid var(--border);
+  background: var(--surface-2); color: var(--muted); font: inherit; font-size: 0.85rem; cursor: pointer;
+}
+.effort-row button.on { background: var(--accent); border-color: var(--accent); color: var(--accent-text); font-weight: 600; }
+.superset-toggle { padding-top: 10px; padding-bottom: 0; }

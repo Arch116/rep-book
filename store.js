@@ -17,8 +17,9 @@ const Store = (() => {
   //          isn't undone by the other device's older copy)
   // settings: your choices on the Settings tab (only the ones you've changed);
   //           settingsChangedAt says which device changed them last
+  // exerciseNotes: { "bench press": { text, updatedAt } } pinned notes shown every time
   const empty = () => ({ routines: [], sessions: [], active: null, activeChangedAt: null, deleted: [],
-    settings: {}, settingsChangedAt: null });
+    settings: {}, settingsChangedAt: null, exerciseNotes: {} });
 
   // What each setting is until you change it.
   const DEFAULT_SETTINGS = {
@@ -33,6 +34,7 @@ const Store = (() => {
     incUpper: 5,
     incLower: 10,
     weeklyGoal: 4,            // workouts per week (0 = no goal)
+    askEffort: true,          // ask "reps left in the tank" after each set
   };
 
   function load() {
@@ -50,7 +52,7 @@ const Store = (() => {
   try {
     const oldRest = localStorage.getItem('workout-rest-seconds');
     if (oldRest !== null) {
-      if (data.settings.restSeconds === undefined) data.settings.restSeconds = Number(oldRest);
+      if (data.settings.restSeconds === undefined && Number.isFinite(Number(oldRest)) && oldRest !== '') data.settings.restSeconds = Number(oldRest);
       writeLocal();
       localStorage.removeItem('workout-rest-seconds');
     }
@@ -79,7 +81,19 @@ const Store = (() => {
     replaceData(next) { data = { ...empty(), ...next }; writeLocal(); },
     set onChange(fn) { onChange = fn; },
 
-    get settings() { return { ...DEFAULT_SETTINGS, ...data.settings }; },
+    // Pinned notes for an exercise (by name), e.g. "elbows tucked".
+    exerciseNote(name) { return data.exerciseNotes?.[name.trim().toLowerCase()]?.text || ''; },
+    setExerciseNote(name, text) {
+      data.exerciseNotes = { ...data.exerciseNotes, [name.trim().toLowerCase()]: { text: text.trim(), updatedAt: now() } };
+      save();
+    },
+
+    get settings() {
+      // Ignore blank values so a damaged setting falls back to its default.
+      const mine = Object.fromEntries(Object.entries(data.settings || {})
+        .filter(([k, v]) => v !== null || k === 'warmupRestSeconds'));
+      return { ...DEFAULT_SETTINGS, ...mine };
+    },
     setSetting(key, value) {
       data.settings = { ...data.settings, [key]: value };
       data.settingsChangedAt = now();
@@ -116,7 +130,8 @@ const Store = (() => {
       const s = data.active;
       s.finishedAt = now();
       s.exercises = s.exercises
-        .map(({ last, bump, ...ex }) => ({ ...ex, sets: ex.sets.filter(set => set.done) }))
+        .filter(ex => !ex.skipped)
+        .map(({ last, bump, deload, showTools, skipped, ...ex }) => ({ ...ex, sets: ex.sets.filter(set => set.done) }))
         .filter(ex => ex.sets.length);
       data.sessions.push(s);
       data.active = null;
