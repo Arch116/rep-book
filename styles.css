@@ -579,3 +579,12 @@ select {
 .home-bw { flex: 1; min-width: 0; color: inherit; text-decoration: none; }
 .routine-card .btn { flex: none; width: auto; padding: 0 18px; min-height: 40px; }
 [data-p-action="log-bw"] { margin-bottom: 14px; }
+
+/* Planning */
+.sched-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 6px 0; border-top: 1px solid var(--border); }
+.sched-row:first-of-type { border-top: 0; }
+.sched-row select { width: 58%; min-height: 40px; }
+.deload-card { border-color: var(--accent-line); background: var(--accent-soft); }
+.deload-card .muted { margin: 4px 0 10px; color: var(--text); }
+.deload-actions { display: flex; gap: 8px; }
+.deload-actions .btn { flex: 1; }

@@ -36,6 +36,11 @@ const Store = (() => {
     incLower: 10,
     weeklyGoal: 4,            // workouts per week (0 = no goal)
     askEffort: true,          // ask "reps left in the tank" after each set
+    schedule: {},             // { 0: routineId, 2: routineId, ... } 0 = Sunday; empty = rotate in order
+    deloadEvery: 6,           // suggest a lighter week after this many training weeks (0 = never)
+    deloadPercent: 60,        // working-set weight during a lighter week
+    deloadStartedAt: null,    // when the current/last lighter week began
+    deloadSnoozedUntil: null, // "Not now" pushes the reminder back a week
   };
 
   function load() {

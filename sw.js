@@ -11,7 +11,7 @@ const CACHE = 'workout-app-v1';
 
 const APP_FILES = [
   './', 'index.html', 'styles.css', 'config.js', 'store.js', 'sync.js', 'app.js',
-  'workout.js', 'history.js', 'progress.js', 'home.js', 'account.js', 'backup.js',
+  'workout.js', 'history.js', 'progress.js', 'plan.js', 'home.js', 'account.js', 'backup.js',
   'manifest.webmanifest', 'icons/icon-180.png', 'icons/icon-192.png', 'icons/icon-512.png',
 ];
 const LIBRARIES = [

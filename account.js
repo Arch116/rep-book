@@ -36,7 +36,7 @@ function renderSettings() {
   drawAccount();
   viewEl.insertAdjacentHTML('afterbegin', '<h2 class="section-label">Sync</h2>');
   viewEl.insertAdjacentHTML('beforeend',
-    workoutSettingsHTML() + weightSettingsHTML() + goalSettingsHTML() + displaySettingsHTML() +
+    workoutSettingsHTML() + weightSettingsHTML() + goalSettingsHTML() + planSettingsHTML() + displaySettingsHTML() +
     backupSectionHTML() + aboutHTML());
 }
 const renderAccount = renderSettings; // the sign-in code below redraws with this name
@@ -106,6 +106,37 @@ function goalSettingsHTML() {
       ${choices('weeklyGoal', [[0, 'None'], [2, '2'], [3, '3'], [4, '4'], [5, '5'], [6, '6']], st.weeklyGoal, 'Workouts per week (weeks start Sunday)')}
     </div>`;
 }
+
+function planSettingsHTML() {
+  const st = Store.settings;
+  const sched = st.schedule || {};
+  const routines = Store.routines;
+  const rows = DAY_NAMES.map((day, i) => `
+    <label class="sched-row">
+      <span>${day}</span>
+      <select data-schedule-day="${i}" aria-label="Routine on ${day}">
+        <option value="">Rest</option>
+        ${routines.map(r => `<option value="${r.id}" ${sched[i] === r.id ? 'selected' : ''}>${esc(r.name)}</option>`).join('')}
+      </select>
+    </label>`).join('');
+  return `
+    <h2 class="section-label">Weekly schedule</h2>
+    <div class="card">
+      <p class="no-top muted small">Pick a routine for each training day. Home then shows what's planned. Leave every day on Rest to simply rotate through your routines in order.</p>
+      ${routines.length ? rows : '<p class="muted small">Create a routine first.</p>'}
+    </div>
+    <h2 class="section-label">Lighter weeks</h2>
+    <div class="card">
+      ${choices('deloadEvery', [[0, 'Never'], [4, '4 wks'], [6, '6 wks'], [8, '8 wks']], st.deloadEvery, 'Suggest a lighter week after')}
+      ${st.deloadEvery ? choices('deloadPercent', [[50, '50%'], [60, '60%'], [70, '70%']], st.deloadPercent, 'Weight during a lighter week') : ''}
+    </div>`;
+}
+
+viewEl.addEventListener('change', e => {
+  const sel = e.target.closest('[data-schedule-day]');
+  if (!sel) return;
+  Store.setSetting('schedule', { ...Store.settings.schedule, [sel.dataset.scheduleDay]: sel.value || null });
+});
 
 function displaySettingsHTML() {
   return `

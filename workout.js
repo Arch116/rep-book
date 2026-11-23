@@ -168,7 +168,10 @@ function startWorkout(routineId) {
     exercises: r.exercises.map(ex => {
       const last = Store.lastPerformance(ex);
       const prev = last ? matchLastSets(last.sets, ex.sets) : [];
-      const bump = suggestedIncrease(ex, last);
+      const deload = inDeloadWeek() && ex.type === 'weight' ? Store.settings.deloadPercent : 0;
+      const bump = deload ? 0 : suggestedIncrease(ex, last);
+      const step = Store.settings.weightStep;
+      const lighter = w => (w == null ? w : Math.max(0, Math.round((w * deload) / 100 / step) * step));
       return {
         id: ex.id,
         name: ex.name,
@@ -178,6 +181,7 @@ function startWorkout(routineId) {
         note: '',
         last, // shown as "Last time: …" while logging; not saved into history
         bump, // extra weight suggested for working sets (0 = none)
+        deload, // % of usual weight during a lighter week (0 = normal)
         sets: ex.sets.map((t, i) => {
           const p = prev[i]; // what you actually did last time, if anything
           const weight = p ? p.weight : t.weight;
@@ -185,7 +189,7 @@ function startWorkout(routineId) {
             warmup: t.warmup,
             target: { reps: t.reps, weight: t.weight, seconds: t.seconds },
             reps: p ? p.reps : t.reps,
-            weight: bump && !t.warmup && weight != null ? weight + bump : weight,
+            weight: deload && !t.warmup ? lighter(weight) : bump && !t.warmup && weight != null ? weight + bump : weight,
             seconds: p ? p.seconds : t.seconds,
             done: false,
           };

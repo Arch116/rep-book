@@ -1,14 +1,5 @@
 // Home screen (#/home): what's next, how this week is going, and recent bests.
 
-// The routine after the one you did last, in the order of your Routines list.
-function nextRoutine() {
-  const routines = Store.routines;
-  if (!routines.length) return null;
-  const last = [...Store.sessions].sort((a, b) => b.startedAt.localeCompare(a.startedAt))[0];
-  const i = last ? routines.findIndex(r => r.id === last.routineId) : -1;
-  return routines[(i + 1) % routines.length];
-}
-
 function startOfWeek() { // Sunday, 12:00 am
   const d = new Date();
   d.setHours(0, 0, 0, 0);
@@ -75,10 +66,11 @@ function renderHome() {
         <span class="btn block">Resume workout</span>
       </a>`;
   } else {
-    const next = nextRoutine();
+    const plan = upNext(); // from plan.js
+    const next = plan?.routine;
     hero = next ? `
       <div class="card home-hero">
-        <div class="stat-label">Up next</div>
+        <div class="stat-label">${esc(plan.label)}</div>
         <div class="home-hero-name">${esc(next.name)}</div>
         <div class="muted">${routineSummary(next)}</div>
         <button class="btn block" data-w-action="start" data-id="${next.id}">Start ${esc(next.name)}</button>
@@ -137,7 +129,7 @@ function renderHome() {
       <button class="btn secondary" data-home-action="log-bw">Log</button>
     </div>`;
 
-  viewEl.innerHTML = hero + weekTiles + bestList + lastCard + bwCard;
+  viewEl.innerHTML = deloadCardHTML() + hero + weekTiles + bestList + lastCard + bwCard;
 }
 
 viewEl.addEventListener('click', e => {
