@@ -94,7 +94,6 @@ function startWorkout(routineId) {
 /* ---------- Screens ---------- */
 
 function renderWorkout() {
-  titleEl.textContent = 'Workout';
   if (Store.active) return renderSession(Store.active);
 
   const toast = toastText ? `<div class="toast">${esc(toastText)}</div>` : '';

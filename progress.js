@@ -80,7 +80,6 @@ function statTiles(h) {
 }
 
 function renderProgress(selectedKey) {
-  titleEl.textContent = 'History';
   progressCharts.forEach(c => c.destroy());
   progressCharts = [];
 

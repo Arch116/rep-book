@@ -36,7 +36,7 @@ html, body {
   border-bottom: 1px solid var(--border);
 }
 .topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.topbar h1 { margin: 0; font-size: 1.5rem; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.topbar h1 { margin: 0; font-size: 1.5rem; letter-spacing: -0.01em; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* Sync indicator, top right. */
 .sync-badge {
@@ -466,3 +466,6 @@ select {
   border-radius: 50%;
   background: var(--accent);
 }
+
+/* Title for screens one level down from a tab (the top bar shows the app name). */
+.screen-title { margin: 0 0 14px; font-size: 1.3rem; }

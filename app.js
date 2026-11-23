@@ -2,11 +2,14 @@
 // and draws it into the <main id="view"> area.
 
 const viewEl = document.getElementById('view');
-const titleEl = document.getElementById('page-title');
 
 // Makes typed text safe to put inside the page.
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c =>
   ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+// The top bar always shows the app name. Screens one level down from a tab
+// (editing a routine, one workout, Account) put their own title at the top.
+const screenTitle = text => `<h2 class="screen-title">${esc(text)}</h2>`;
 
 const TYPES = { weight: 'Weight', bodyweight: 'Bodyweight', time: 'Timed' };
 
@@ -25,7 +28,6 @@ function routineSummary(r) {
 /* ---------- Routines list ---------- */
 
 function renderRoutineList() {
-  titleEl.textContent = 'Routines';
   const routines = Store.routines;
   if (!routines.length) {
     viewEl.innerHTML = `
@@ -111,8 +113,8 @@ function exerciseCard(ex, i, count) {
 }
 
 function renderEditor() {
-  titleEl.textContent = draftIsNew ? 'New routine' : 'Edit routine';
   viewEl.innerHTML = `
+    ${screenTitle(draftIsNew ? 'New routine' : 'Edit routine')}
     <label class="field">
       <span>Routine name</span>
       <input data-field="name" value="${esc(draft.name)}" placeholder="e.g. Push">

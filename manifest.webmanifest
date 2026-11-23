@@ -1,6 +1,6 @@
 {
-  "name": "Workout Log",
-  "short_name": "Workouts",
+  "name": "Rep Book",
+  "short_name": "Rep Book",
   "description": "Plan routines, log workouts and track progress.",
   "start_url": "./#/workout",
   "scope": "./",

@@ -34,11 +34,11 @@ let accountMessage = '';
 
 function renderAccount() {
   drawAccount();
+  viewEl.insertAdjacentHTML('afterbegin', screenTitle('Account'));
   viewEl.insertAdjacentHTML('beforeend', backupSectionHTML()); // from backup.js
 }
 
 function drawAccount() {
-  titleEl.textContent = 'Account';
   const s = Sync.status;
   const msg = accountMessage ? `<div class="toast">${esc(accountMessage)}</div>` : '';
   accountMessage = '';

@@ -32,7 +32,6 @@ function volume(session) {
 function renderHistory(sessionId, extra) {
   if (sessionId === 'progress') return renderProgress(extra);
   if (sessionId) return renderSessionDetail(sessionId);
-  titleEl.textContent = 'History';
 
   const sessions = [...Store.sessions].sort((a, b) => b.startedAt.localeCompare(a.startedAt));
   if (!sessions.length) {
@@ -73,7 +72,6 @@ function renderHistory(sessionId, extra) {
 function renderSessionDetail(sessionId) {
   const s = Store.sessions.find(x => x.id === sessionId);
   if (!s) { location.hash = '#/history'; return; }
-  titleEl.textContent = s.routineName;
 
   const vol = volume(s);
   const stats = [
@@ -105,6 +103,7 @@ function renderSessionDetail(sessionId) {
 
   viewEl.innerHTML = `
     <a class="back-link" href="#/history">‹ History</a>
+    ${screenTitle(s.routineName)}
     <p class="muted small hint">${stats}</p>
     ${s.notes ? `<div class="card"><div class="muted small">Notes</div><div class="note-text">${esc(s.notes)}</div></div>` : ''}
     ${cards}
