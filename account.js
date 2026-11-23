@@ -72,7 +72,10 @@ function workoutSettingsHTML() {
       ${choices('restAlert', [['sound', 'Sound'], ['vibrate', 'Vibrate'], ['both', 'Both']], st.restAlert, 'When rest is over')}
       <p class="muted small setting-note">iPhones can't vibrate for web apps, and the sound follows your ringer switch. Alerts only play while Rep Book is open.</p>
       ${onOff('keepAwake', st.keepAwake, 'Keep the screen on during a workout')}
-      ${onOff('askEffort', st.askEffort, 'Ask how many reps were left', 'After each set, tap how many more you could have done. Weight suggestions hold off if sets were all-out.')}
+      ${onOff('askEffort', st.askEffort, 'Effort targets (reps left in the tank)', 'After each working set, tap how many more reps you could have done. Weight goes up only when your first sets stay within your aim.')}
+      ${st.askEffort ? `
+        ${choices('effortEarly', [['1-2', '1–2'], ['2-3', '2–3'], ['3-4', '3–4']], st.effortEarly, 'Aim for these reps left on your first sets')}
+        ${choices('effortLast', [['0-1', '0–1'], ['1-2', '1–2'], ['2-3', '2–3']], st.effortLast, 'And on your last set')}` : ''}
     </div>`;
 }
 

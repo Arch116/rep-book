@@ -36,6 +36,8 @@ const Store = (() => {
     incLower: 10,
     weeklyGoal: 4,            // workouts per week (0 = no goal)
     askEffort: true,          // ask "reps left in the tank" after each set
+    effortEarly: '2-3',       // aim: reps left on every working set but the last
+    effortLast: '0-1',        // aim: reps left on the last working set
     schedule: {},             // { 0: routineId, 2: routineId, ... } 0 = Sunday; empty = rotate in order
     deloadEvery: 6,           // suggest a lighter week after this many training weeks (0 = never)
     deloadPercent: 60,        // working-set weight during a lighter week
@@ -179,7 +181,7 @@ const Store = (() => {
       s.finishedAt = now();
       s.exercises = s.exercises
         .filter(ex => !ex.skipped)
-        .map(({ last, bump, deload, showTools, skipped, ...ex }) => ({ ...ex, sets: ex.sets.filter(set => set.done) }))
+        .map(({ last, bump, progressNote, deload, showTools, skipped, ...ex }) => ({ ...ex, sets: ex.sets.filter(set => set.done) }))
         .filter(ex => ex.sets.length);
       data.sessions.push(s);
       data.active = null;

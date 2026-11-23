@@ -588,3 +588,9 @@ select {
 .deload-card .muted { margin: 4px 0 10px; color: var(--text); }
 .deload-actions { display: flex; gap: 8px; }
 .deload-actions .btn { flex: 1; }
+
+/* Effort aim: the reps-left choices that match your plan get a gold outline */
+.effort-row .aim { color: var(--accent); font-size: 0.72rem; }
+.effort-row .muted.small { line-height: 1.15; min-width: 64px; }
+.effort-row button.aimed { border-color: var(--accent-line); color: var(--text); }
+.hold-line { margin: 2px 0 6px; }

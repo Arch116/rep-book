@@ -78,15 +78,40 @@ function matchLastSets(lastSets, routineSets) {
 
 // If you hit every target rep on every working set last time, suggest
 // adding weight (when that's switched on in Settings).
-function suggestedIncrease(ex, last) {
+// "2-3" → [2, 3]
+const effortRange = text => String(text).split('-').map(Number);
+const repsLeft = set => 10 - set.rpe; // saved as RPE; 10 = 0 reps left
+
+// Whether to add weight this time, and a short reason shown under the exercise.
+// Rules: hit every target rep last time, and (if you rated your sets) the
+// early sets weren't harder than your aim. The last set is meant to be hard,
+// so it doesn't count against you.
+function progression(ex, last) {
   const st = Store.settings;
-  if (!st.autoIncrease || ex.type !== 'weight' || !last) return 0;
+  if (!st.autoIncrease || ex.type !== 'weight' || !last) return { bump: 0, note: '' };
   const work = last.sets.filter(s => !s.warmup);
-  const hitAll = work.length && work.every(s => s.target?.reps && (s.reps ?? 0) >= s.target.reps);
-  // If those sets were all-out (about 0 reps left on average), hold the weight.
-  const rated = work.filter(s => s.rpe);
-  const allOut = rated.length && rated.reduce((sum, s) => sum + s.rpe, 0) / rated.length >= 9.5;
-  return hitAll && !allOut ? (isLowerBody(ex.name) ? st.incLower : st.incUpper) : 0;
+  if (!work.length) return { bump: 0, note: '' };
+  const inc = isLowerBody(ex.name) ? st.incLower : st.incUpper;
+  const missed = work.some(s => s.target?.reps && (s.reps ?? 0) < s.target.reps);
+  if (missed) return { bump: 0, note: 'Same weight: hit all your target reps first' };
+  if (!work.every(s => s.target?.reps)) return { bump: 0, note: '' };
+
+  const early = work.slice(0, -1).filter(s => s.rpe);
+  const lastSet = work[work.length - 1];
+  if (st.askEffort) {
+    const [minLeft] = effortRange(st.effortEarly);
+    const tooHard = early.filter(s => repsLeft(s) < minLeft);
+    if (tooHard.length) {
+      return { bump: 0, note: `Same weight: your first sets had fewer than ${minLeft} reps left last time` };
+    }
+    const [, maxLastLeft] = effortRange(st.effortLast);
+    const easyLast = lastSet.rpe && repsLeft(lastSet) > maxLastLeft + 1;
+    if (easyLast) return { bump: inc, note: `↑ +${inc} lbs: even your last set had reps to spare` };
+  } else if (work.filter(s => s.rpe).length) {
+    const rated = work.filter(s => s.rpe);
+    if (rated.reduce((n, s) => n + s.rpe, 0) / rated.length >= 9.5) return { bump: 0, note: 'Same weight: last time was all-out' };
+  }
+  return { bump: inc, note: `↑ +${inc} lbs: you hit every rep last time` };
 }
 
 // The type an exercise had the last time you did it or planned it.
@@ -169,7 +194,8 @@ function startWorkout(routineId) {
       const last = Store.lastPerformance(ex);
       const prev = last ? matchLastSets(last.sets, ex.sets) : [];
       const deload = inDeloadWeek() && ex.type === 'weight' ? Store.settings.deloadPercent : 0;
-      const bump = deload ? 0 : suggestedIncrease(ex, last);
+      const prog = deload ? { bump: 0, note: '' } : progression(ex, last);
+      const bump = prog.bump;
       const step = Store.settings.weightStep;
       const lighter = w => (w == null ? w : Math.max(0, Math.round((w * deload) / 100 / step) * step));
       return {
@@ -181,6 +207,7 @@ function startWorkout(routineId) {
         note: '',
         last, // shown as "Last time: …" while logging; not saved into history
         bump, // extra weight suggested for working sets (0 = none)
+        progressNote: prog.note,
         deload, // % of usual weight during a lighter week (0 = normal)
         sets: ex.sets.map((t, i) => {
           const p = prev[i]; // what you actually did last time, if anything
@@ -261,13 +288,22 @@ function logRow(ex, exIndex, s, setIndex, workingNumber) {
 // "Reps left in the tank" after a set: 0 = couldn't do another. Saved as
 // RPE (10 = max effort), the usual way lifters log how hard a set was.
 const RIR_CHOICES = [[6, '4+'], [7, '3'], [8, '2'], [9, '1'], [10, '0']];
-function effortRow(exIndex, setIndex, s) {
-  if (!s.done || !Store.settings.askEffort) return '';
+// The reps-left aim for a set: the last working set is meant to be hardest.
+function effortAim(ex, setIndex) {
+  const st = Store.settings;
+  const lastWorking = ex.sets.map((x, i) => (x.warmup ? -1 : i)).filter(i => i >= 0).pop();
+  return effortRange(Number(setIndex) === lastWorking ? st.effortLast : st.effortEarly);
+}
+
+function effortRow(ex, exIndex, setIndex, s) {
+  if (!s.done || s.warmup || !Store.settings.askEffort) return '';
+  const [lo, hi] = effortAim(ex, setIndex);
+  const inAim = rpe => { const left = 10 - rpe; return left >= lo && (left <= hi || (hi >= 4 && left >= 4)); };
   return `
     <div class="effort-row" data-effort-for="${exIndex}-${setIndex}">
-      <span class="muted small">Reps left?</span>
+      <span class="muted small">Reps left?<br><span class="aim">aim ${lo}–${hi}</span></span>
       ${RIR_CHOICES.map(([rpe, label]) => `
-        <button class="${s.rpe === rpe ? 'on' : ''}" data-w-action="effort" data-ex="${exIndex}" data-set="${setIndex}" data-rpe="${rpe}" aria-pressed="${s.rpe === rpe}">${label}</button>`).join('')}
+        <button class="${s.rpe === rpe ? 'on' : ''} ${inAim(rpe) ? 'aimed' : ''}" data-w-action="effort" data-ex="${exIndex}" data-set="${setIndex}" data-rpe="${rpe}" aria-pressed="${s.rpe === rpe}" aria-label="${label} reps left${inAim(rpe) ? ' (your aim)' : ''}">${label}</button>`).join('')}
     </div>`;
 }
 
@@ -295,7 +331,8 @@ function sessionExerciseCard(ex, i, all) {
   const lastLine = ex.last
     ? `Last time (${shortDate(ex.last.date)}): ${(lastWork.length ? lastWork : ex.last.sets).map(s => fmtSet(ex.type, s)).join(', ')}`
     : 'First time doing this one';
-  const bumpLine = ex.bump ? `<div class="bump-line small">↑ +${ex.bump} lbs: you hit every rep last time</div>` : '';
+  const bumpLine = ex.progressNote ? `<div class="${ex.bump ? 'bump-line' : 'hold-line muted'} small">${esc(ex.progressNote)}</div>`
+    : ex.bump ? `<div class="bump-line small">↑ +${ex.bump} lbs: you hit every rep last time</div>` : '';
   const deloadLine = ex.deload ? `<div class="bump-line small">↓ Lighter week: working sets at ${ex.deload}%</div>` : '';
   const pinned = Store.exerciseNote(ex.name);
   const pinLine = pinned ? `<button class="pin-note" data-w-action="pin" data-ex="${i}"><span aria-hidden="true">📌</span> ${esc(pinned)}</button>` : '';
@@ -320,7 +357,7 @@ function sessionExerciseCard(ex, i, all) {
       <div class="muted small last-line">${lastLine}</div>
       ${bumpLine}${deloadLine}
       <div class="log-row head ${isTime ? 'timed' : ''}">${head}</div>
-      ${ex.sets.map((s, j) => logRow(ex, i, s, j, s.warmup ? '' : ++working) + effortRow(i, j, s)).join('')}
+      ${ex.sets.map((s, j) => logRow(ex, i, s, j, s.warmup ? '' : ++working) + effortRow(ex, i, j, s)).join('')}
       <button class="link-btn" data-w-action="add-set" data-ex="${i}">+ Add set</button>
       <input class="ex-note" data-w-field="note" data-ex="${i}" value="${esc(ex.note)}" placeholder="Note for today (optional)" aria-label="Note for ${esc(ex.name)}">
     </div>`;
@@ -392,7 +429,7 @@ viewEl.addEventListener('click', e => {
       row.classList.toggle('done', set.done);
       // Show or hide the "reps left" question under this set.
       viewEl.querySelector(`[data-effort-for="${btn.dataset.ex}-${btn.dataset.set}"]`)?.remove();
-      if (set.done) row.insertAdjacentHTML('afterend', effortRow(btn.dataset.ex, btn.dataset.set, set));
+      if (set.done) row.insertAdjacentHTML('afterend', effortRow(ex, btn.dataset.ex, btn.dataset.set, set));
       unlockSound(); // phones only allow sound that follows a tap
       // In a superset, rest only after the last exercise of the pair.
       const next = s.exercises[Number(btn.dataset.ex) + 1];
