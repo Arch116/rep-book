@@ -242,4 +242,6 @@ window.addEventListener('hashchange', () => route());
 window.addEventListener('DOMContentLoaded', () => {
   route();
   Sync.init();
+  // Save the app's files on this device so it opens with no signal (see sw.js).
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 });
