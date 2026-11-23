@@ -16,16 +16,12 @@ function saveRestEnd() {
 }
 let toastText = null;    // one-time message such as "Workout saved"
 
-function restSeconds() {
-  try {
-    const raw = localStorage.getItem('workout-rest-seconds');
-    if (raw === null) return 90;
-    const v = Number(raw);
-    return REST_CHOICES.includes(v) ? v : 90;
-  } catch { return 90; }
-}
-function setRestSeconds(v) {
-  try { localStorage.setItem('workout-rest-seconds', String(v)); } catch {}
+function restSeconds() { return Store.settings.restSeconds; }
+function setRestSeconds(v) { Store.setSetting('restSeconds', v); }
+// Rest after this set: warm-ups can have their own (shorter) rest.
+function restAfter(set) {
+  const st = Store.settings;
+  return set.warmup && st.warmupRestSeconds !== null ? st.warmupRestSeconds : st.restSeconds;
 }
 
 const shortDate = iso => new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
@@ -37,6 +33,34 @@ function fmtSet(type, s) {
   if (type === 'time') return `${s.seconds ?? '–'}s`;
   if (type === 'bodyweight') return `${s.reps ?? '–'}${s.weight ? ` +${s.weight}` : ''}`;
   return `${s.reps ?? '–'} × ${s.weight ?? '–'}`;
+}
+
+// Leg and hip exercises usually go up in bigger jumps than upper-body ones.
+const LOWER_BODY = /squat|dead ?lift|rdl|leg|lunge|hip|glute|calf|step.?up|good ?morning|split/i;
+const isLowerBody = name => LOWER_BODY.test(name);
+
+// Whether to show plate loading for an exercise. You can switch it in the
+// routine editor; until then it's guessed from the name.
+function isBarbell(ex) {
+  if (ex.type !== 'weight') return false;
+  if (typeof ex.barbell === 'boolean') return ex.barbell;
+  if (/dumbbell|\bdb\b|cable|machine|kettlebell|smith|band/i.test(ex.name)) return false;
+  return /barbell|bench|squat|dead ?lift|press|row|clean|rdl|good ?morning|hip thrust|shrug/i.test(ex.name);
+}
+
+// What to put on each side of the bar, using the plates you own.
+function platesText(weight) {
+  const st = Store.settings;
+  if (!weight) return '';
+  if (weight < st.barWeight) return 'Less than the bar';
+  let side = (weight - st.barWeight) / 2;
+  if (side === 0) return 'Just the bar';
+  const used = [];
+  for (const p of [...st.plates].sort((a, b) => b - a)) {
+    while (side >= p - 1e-9) { used.push(p); side -= p; }
+  }
+  const text = used.length ? `Each side: ${used.join(' + ')}` : 'Each side: —';
+  return side > 1e-9 ? `${text} (${+(side * 2).toFixed(2)} lbs short)` : text;
 }
 
 /* ---------- Starting a workout ---------- */
@@ -52,6 +76,16 @@ function matchLastSets(lastSets, routineSets) {
   });
 }
 
+// If you hit every target rep on every working set last time, suggest
+// adding weight (when that's switched on in Settings).
+function suggestedIncrease(ex, last) {
+  const st = Store.settings;
+  if (!st.autoIncrease || ex.type !== 'weight' || !last) return 0;
+  const work = last.sets.filter(s => !s.warmup);
+  const hitAll = work.length && work.every(s => s.target?.reps && (s.reps ?? 0) >= s.target.reps);
+  return hitAll ? (isLowerBody(ex.name) ? st.incLower : st.incUpper) : 0;
+}
+
 function startWorkout(routineId) {
   const r = Store.getRoutine(routineId);
   if (!r) return;
@@ -64,19 +98,23 @@ function startWorkout(routineId) {
     exercises: r.exercises.map(ex => {
       const last = Store.lastPerformance(ex);
       const prev = last ? matchLastSets(last.sets, ex.sets) : [];
+      const bump = suggestedIncrease(ex, last);
       return {
         id: ex.id,
         name: ex.name,
         type: ex.type,
+        barbell: isBarbell(ex),
         note: '',
         last, // shown as "Last time: …" while logging; not saved into history
+        bump, // extra weight suggested for working sets (0 = none)
         sets: ex.sets.map((t, i) => {
           const p = prev[i]; // what you actually did last time, if anything
+          const weight = p ? p.weight : t.weight;
           return {
             warmup: t.warmup,
             target: { reps: t.reps, weight: t.weight, seconds: t.seconds },
             reps: p ? p.reps : t.reps,
-            weight: p ? p.weight : t.weight,
+            weight: bump && !t.warmup && weight != null ? weight + bump : weight,
             seconds: p ? p.seconds : t.seconds,
             done: false,
           };
@@ -125,9 +163,15 @@ function logRow(ex, exIndex, s, setIndex, workingNumber) {
   const amount = isTime
     ? `<input type="number" inputmode="numeric" min="0" data-w-field="seconds" ${attrs} value="${s.seconds ?? ''}" aria-label="Seconds">`
     : `<input type="number" inputmode="numeric" min="0" data-w-field="reps" ${attrs} value="${s.reps ?? ''}" aria-label="Reps">`;
-  const weight = isTime ? '' :
-    `<input type="number" inputmode="decimal" min="0" step="any" data-w-field="weight" ${attrs} value="${s.weight ?? ''}" placeholder="${ex.type === 'bodyweight' ? '0' : ''}" aria-label="Pounds">`;
+  const step = Store.settings.weightStep;
+  const weight = isTime ? '' : `
+    <div class="stepper">
+      <button data-w-action="step" data-dir="-1" ${attrs} aria-label="${step} pounds less">−</button>
+      <input type="number" inputmode="decimal" min="0" step="any" data-w-field="weight" ${attrs} value="${s.weight ?? ''}" placeholder="${ex.type === 'bodyweight' ? '0' : ''}" aria-label="Pounds">
+      <button data-w-action="step" data-dir="1" ${attrs} aria-label="${step} pounds more">+</button>
+    </div>`;
   const target = s.target ? fmtSet(ex.type, s.target) : '—';
+  const plates = ex.barbell ? `<div class="plates muted small" data-plates="${exIndex}-${setIndex}">${platesText(s.weight)}</div>` : '';
   return `
     <div class="log-row ${isTime ? 'timed' : ''} ${s.done ? 'done' : ''}">
       <span class="set-tag static ${s.warmup ? 'warm' : ''}">${s.warmup ? 'W' : workingNumber}</span>
@@ -135,6 +179,7 @@ function logRow(ex, exIndex, s, setIndex, workingNumber) {
       ${amount}
       ${weight}
       <button class="check ${s.done ? 'on' : ''}" data-w-action="done" ${attrs} aria-label="Mark set done" aria-pressed="${s.done}">✓</button>
+      ${plates}
     </div>`;
 }
 
@@ -145,6 +190,7 @@ function sessionExerciseCard(ex, i) {
   const lastLine = ex.last
     ? `Last time (${shortDate(ex.last.date)}): ${(lastWork.length ? lastWork : ex.last.sets).map(s => fmtSet(ex.type, s)).join(', ')}`
     : 'First time doing this one';
+  const bumpLine = ex.bump ? `<div class="bump-line small">↑ +${ex.bump} lbs: you hit every rep last time</div>` : '';
   const head = isTime
     ? '<span>Set</span><span>Target</span><span>Secs</span><span></span>'
     : `<span>Set</span><span>Target</span><span>Reps</span><span>${ex.type === 'bodyweight' ? '+ lbs' : 'lbs'}</span><span></span>`;
@@ -152,6 +198,7 @@ function sessionExerciseCard(ex, i) {
     <div class="card exercise">
       <div class="ex-title">${esc(ex.name)}</div>
       <div class="muted small last-line">${lastLine}</div>
+      ${bumpLine}
       <div class="log-row head ${isTime ? 'timed' : ''}">${head}</div>
       ${ex.sets.map((s, j) => logRow(ex, i, s, j, s.warmup ? '' : ++working)).join('')}
       <button class="link-btn" data-w-action="add-set" data-ex="${i}">+ Add set</button>
@@ -192,6 +239,10 @@ viewEl.addEventListener('input', e => {
   else if (field === 'note') s.exercises[t.dataset.ex].note = t.value;
   else s.exercises[t.dataset.ex].sets[t.dataset.set][field] = t.value === '' ? null : Number(t.value);
   Store.setActive(s);
+  if (field === 'weight') {
+    const p = viewEl.querySelector(`[data-plates="${t.dataset.ex}-${t.dataset.set}"]`);
+    if (p) p.textContent = platesText(t.value === '' ? null : Number(t.value));
+  }
 });
 
 viewEl.addEventListener('click', e => {
@@ -217,8 +268,21 @@ viewEl.addEventListener('click', e => {
       btn.classList.toggle('on', set.done);
       btn.setAttribute('aria-pressed', set.done);
       btn.closest('.log-row').classList.toggle('done', set.done);
-      if (set.done && restSeconds()) restEndsAt = Date.now() + restSeconds() * 1000;
+      unlockSound(); // phones only allow sound that follows a tap
+      const rest = restAfter(set);
+      if (set.done && rest) restEndsAt = Date.now() + rest * 1000;
       tick();
+      return;
+    }
+    case 'step': {
+      const set = ex.sets[btn.dataset.set];
+      const next = Math.max(0, +((set.weight || 0) + Number(btn.dataset.dir) * Store.settings.weightStep).toFixed(2));
+      set.weight = next;
+      Store.setActive(s);
+      const input = btn.parentElement.querySelector('input');
+      input.value = next; // update in place so the page doesn't jump
+      const p = viewEl.querySelector(`[data-plates="${btn.dataset.ex}-${btn.dataset.set}"]`);
+      if (p) p.textContent = platesText(next);
       return;
     }
     case 'add-set': {
@@ -307,9 +371,55 @@ function tick() {
   restBar.querySelector('.rest-time').textContent = left > 0 ? `Rest ${mmss(left)}` : 'Rest over. Next set!';
   if (left <= 0 && !buzzed) {
     buzzed = true;
-    navigator.vibrate?.([200, 100, 200]); // works on Android; iPhones ignore it
+    const how = Store.settings.restAlert;
+    if (how !== 'sound') navigator.vibrate?.([200, 100, 200]); // Android only; iPhones ignore it
+    if (how !== 'vibrate') beep();
   }
 }
+
+/* ---------- Rest alert sound ---------- */
+
+let audio = null;
+function unlockSound() {
+  try {
+    audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+    if (audio.state === 'suspended') audio.resume();
+  } catch {}
+}
+function beep() {
+  if (!audio) return;
+  const t0 = audio.currentTime;
+  [0, 0.25, 0.5].forEach(offset => { // three short beeps
+    const osc = audio.createOscillator();
+    const gain = audio.createGain();
+    osc.frequency.value = 880;
+    gain.gain.setValueAtTime(0.0001, t0 + offset);
+    gain.gain.exponentialRampToValueAtTime(0.4, t0 + offset + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0 + offset + 0.18);
+    osc.connect(gain).connect(audio.destination);
+    osc.start(t0 + offset);
+    osc.stop(t0 + offset + 0.2);
+  });
+}
+
+/* ---------- Keep the screen on during a workout ---------- */
+
+let wakeLock = null, askingForWake = false;
+async function updateWakeLock() {
+  const want = !!Store.active && Store.settings.keepAwake && document.visibilityState === 'visible';
+  if (want && !wakeLock && !askingForWake && 'wakeLock' in navigator) {
+    askingForWake = true;
+    try {
+      wakeLock = await navigator.wakeLock.request('screen');
+      wakeLock.addEventListener('release', () => { wakeLock = null; });
+    } catch {} // not supported or not allowed right now; tried again next second
+    askingForWake = false;
+  } else if (!want && wakeLock) {
+    wakeLock.release().catch(() => {});
+    wakeLock = null;
+  }
+}
+setInterval(updateWakeLock, 1000);
 setInterval(tick, 1000);
 
 // Small green dot on the Workout tab while a workout is in progress.

@@ -11,6 +11,17 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c =>
 // (editing a routine, one workout, Account) put their own title at the top.
 const screenTitle = text => `<h2 class="screen-title">${esc(text)}</h2>`;
 
+// Text size (Settings > Display). Saved on this device only.
+const TEXT_SIZES = { 1: 'Normal', 1.15: 'Large', 1.3: 'Larger' };
+function textSize() {
+  try { return Number(localStorage.getItem('rep-text-size')) || 1; } catch { return 1; }
+}
+function applyTextSize(v) {
+  try { localStorage.setItem('rep-text-size', String(v)); } catch {}
+  document.documentElement.style.setProperty('--text-scale', v);
+}
+document.documentElement.style.setProperty('--text-scale', textSize());
+
 const TYPES = { weight: 'Weight', bodyweight: 'Bodyweight', time: 'Timed' };
 
 const newSet = prev => prev ? { ...prev } : { warmup: false, reps: 8, weight: null, seconds: 60 };
@@ -106,6 +117,10 @@ function exerciseCard(ex, i, count) {
         ${Object.entries(TYPES).map(([key, label]) => `
           <button data-action="type" data-ex="${i}" data-type="${key}" class="${ex.type === key ? 'on' : ''}">${label}</button>`).join('')}
       </div>
+      ${ex.type === 'weight' ? `
+        <button class="toggle-row" data-action="barbell" data-ex="${i}" aria-pressed="${isBarbell(ex)}">
+          <span class="toggle ${isBarbell(ex) ? 'on' : ''}" aria-hidden="true"></span>Barbell: show plates to load
+        </button>` : ''}
       <div class="set-row head ${isTime ? 'timed' : ''}">${headers}</div>
       ${rows}
       <button class="link-btn" data-action="add-set" data-ex="${i}">+ Add set</button>
@@ -164,6 +179,9 @@ viewEl.addEventListener('click', e => {
       break;
     case 'type':
       ex.type = btn.dataset.type;
+      break;
+    case 'barbell':
+      ex.barbell = !isBarbell(ex);
       break;
     case 'add-set': {
       const last = ex.sets[ex.sets.length - 1];

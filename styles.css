@@ -18,12 +18,13 @@
 
 * { box-sizing: border-box; }
 
+html { font-size: calc(16px * var(--text-scale, 1)); }
 html, body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  font-size: 17px;
+  font-size: calc(17px * var(--text-scale, 1));
   -webkit-tap-highlight-color: transparent;
 }
 
@@ -302,12 +303,12 @@ button.routine-card {
 
 .log-row {
   display: grid;
-  grid-template-columns: 36px 62px 1fr 1fr 44px;
-  gap: 6px;
+  grid-template-columns: 32px 54px minmax(0, 1fr) minmax(0, 1.9fr) 40px;
+  gap: 5px;
   align-items: center;
   margin-bottom: 8px;
 }
-.log-row.timed { grid-template-columns: 36px 62px 1fr 44px; }
+.log-row.timed { grid-template-columns: 32px 54px minmax(0, 1fr) 40px; }
 .log-row.head { color: var(--muted); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px; }
 .log-row.head span { text-align: center; }
 .log-row input { text-align: center; padding: 8px 4px; }
@@ -483,5 +484,56 @@ select {
 
 /* Settings */
 .about { text-align: center; margin-top: 24px; }
-.seg button[data-s-action] { font-variant-numeric: tabular-nums; }
 .card > .seg:last-child { margin-bottom: 0; }
+
+/* Weight box with − / + buttons */
+.stepper { display: grid; grid-template-columns: 30px minmax(0, 1fr) 30px; gap: 3px; }
+.stepper button {
+  min-height: 44px; border: 0; border-radius: 10px;
+  background: var(--surface-2); color: var(--text); font: inherit; font-size: 1.1rem; cursor: pointer;
+}
+.stepper button:active { background: var(--border); }
+.log-row .stepper input { padding: 8px 2px; }
+/* Plate loading line under a barbell set */
+.log-row .plates { grid-column: 3 / -1; margin-top: -4px; font-size: 0.78rem; }
+/* "↑ +5 lbs" suggestion under the exercise name */
+.bump-line { color: var(--accent); font-weight: 600; margin: 2px 0 6px; }
+
+/* On/off switch */
+.toggle-row {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  background: none; border: 0; padding: 4px 0 12px; color: var(--text); font: inherit; font-size: 0.9rem; text-align: left; cursor: pointer;
+}
+.toggle {
+  flex: none; width: 44px; height: 26px; border-radius: 13px; background: var(--surface-2);
+  border: 1px solid var(--border); position: relative; transition: background .15s;
+}
+.toggle::after {
+  content: ""; position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; border-radius: 50%;
+  background: var(--muted); transition: transform .15s;
+}
+.toggle.on { background: var(--accent); border-color: var(--accent); }
+.toggle.on::after { transform: translateX(18px); background: var(--accent-text); }
+
+/* Weekly goal progress */
+.goal-bar { height: 6px; border-radius: 3px; background: var(--surface-2); margin: 6px 0 4px; overflow: hidden; }
+.goal-bar i { display: block; height: 100%; background: var(--accent); border-radius: 3px; }
+
+/* Settings rows */
+.setting { margin-bottom: 14px; }
+.setting:last-child { margin-bottom: 0; }
+.setting-label { font-size: 0.85rem; color: var(--muted); margin-bottom: 6px; }
+.setting .seg { margin-bottom: 0; }
+.setting-note { margin: -6px 0 14px; }
+.toggle-row.setting { padding: 4px 0; }
+.block-hint { display: block; margin-top: 2px; }
+.chip-grid { display: flex; flex-wrap: wrap; gap: 6px; }
+.plate-chip {
+  min-width: 52px; min-height: 40px; padding: 0 10px; border-radius: 20px;
+  border: 1px solid var(--border); background: var(--surface-2); color: var(--muted); font: inherit; font-size: 0.9rem; cursor: pointer;
+}
+.plate-chip.on { background: var(--accent); border-color: var(--accent); color: var(--accent-text); font-weight: 600; }
+
+/* Keep the top bar the same size when the text size is bigger. */
+.topbar h1 { font-size: 24px; }
+.sync-badge { font-size: 13px; }

@@ -9,10 +9,10 @@ function nextRoutine() {
   return routines[(i + 1) % routines.length];
 }
 
-function startOfWeek() { // Monday, 12:00 am
+function startOfWeek() { // Sunday, 12:00 am
   const d = new Date();
   d.setHours(0, 0, 0, 0);
-  d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+  d.setDate(d.getDate() - d.getDay());
   return d;
 }
 
@@ -20,6 +20,17 @@ function daysAgoText(iso) {
   const start = d => new Date(d.getFullYear(), d.getMonth(), d.getDate());
   const days = Math.round((start(new Date()) - start(new Date(iso))) / 864e5);
   return days === 0 ? 'Today' : `${days}d ago`;
+}
+
+// "3 of 4" toward your weekly goal (or just "3" with no goal).
+function workoutsTile(count) {
+  const goal = Store.settings.weeklyGoal;
+  if (!goal) return `<div class="stat-value">${count}</div><div class="muted small">since Sunday</div>`;
+  const pct = Math.min(100, Math.round((count / goal) * 100));
+  return `
+    <div class="stat-value">${count} <span class="muted small">of ${goal}</span></div>
+    <div class="goal-bar" role="img" aria-label="${count} of ${goal} workouts this week"><i style="width:${pct}%"></i></div>
+    <div class="muted small">${count >= goal ? 'Goal met' : `${goal - count} to go`}</div>`;
 }
 
 // Exercises with a new personal best in the last 30 days, newest first.
@@ -83,7 +94,7 @@ function renderHome() {
   const weekTiles = `
     <h2 class="section-label">This week</h2>
     <div class="stats">
-      <div class="stat"><div class="stat-label">Workouts</div><div class="stat-value">${week.length}</div><div class="muted small">since Monday</div></div>
+      <div class="stat"><div class="stat-label">Workouts</div>${workoutsTile(week.length)}</div>
       <div class="stat"><div class="stat-label">Lifted</div><div class="stat-value">${lbs ? lbs.toLocaleString() : '0'}</div><div class="muted small">lbs</div></div>
       <div class="stat"><div class="stat-label">Last workout</div><div class="stat-value">${last ? daysAgoText(last.startedAt) : '–'}</div><div class="muted small">${last ? esc(last.routineName) : 'none yet'}</div></div>
     </div>`;

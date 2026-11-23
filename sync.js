@@ -62,7 +62,12 @@ const Sync = (() => {
     const activeChangedAt = (useB ? b.activeChangedAt : a.activeChangedAt) || null;
     if (active && (gone.has(active.id) || sessions.some(s => s.id === active.id))) active = null;
 
-    return { routines, sessions, deleted, active: active || null, activeChangedAt };
+    // Settings: whichever device changed them most recently wins.
+    const settingsFromB = (b.settingsChangedAt || '') > (a.settingsChangedAt || '');
+    const settings = (settingsFromB ? b.settings : a.settings) || {};
+    const settingsChangedAt = (settingsFromB ? b.settingsChangedAt : a.settingsChangedAt) || null;
+
+    return { routines, sessions, deleted, active: active || null, activeChangedAt, settings, settingsChangedAt };
   }
 
   async function syncNow() {

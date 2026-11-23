@@ -35,35 +35,103 @@ let accountMessage = '';
 function renderSettings() {
   drawAccount();
   viewEl.insertAdjacentHTML('afterbegin', '<h2 class="section-label">Sync</h2>');
-  viewEl.insertAdjacentHTML('beforeend', restSectionHTML() + backupSectionHTML() + aboutHTML());
+  viewEl.insertAdjacentHTML('beforeend',
+    workoutSettingsHTML() + weightSettingsHTML() + goalSettingsHTML() + displaySettingsHTML() +
+    backupSectionHTML() + aboutHTML());
 }
 const renderAccount = renderSettings; // the sign-in code below redraws with this name
 
-// Rest timer length: the same setting as the "Rest" button during a workout.
-const REST_LABELS = { 0: 'Off', 60: '1:00', 90: '1:30', 120: '2:00', 180: '3:00' };
-function restSectionHTML() {
-  const current = restSeconds(); // from workout.js
+/* ---------- Settings controls ---------- */
+// A row of choices; tapping one saves it. `local` = this device only.
+function choices(key, options, current, label) {
   return `
-    <h2 class="section-label">Rest timer</h2>
-    <div class="card">
-      <p class="no-top muted small">Starts counting down when you tick off a set.</p>
-      <div class="seg" role="group" aria-label="Rest timer length">
-        ${[0, 60, 90, 120, 180].map(v => `
-          <button data-s-action="rest" data-v="${v}" class="${v === current ? 'on' : ''}" aria-pressed="${v === current}">${REST_LABELS[v]}</button>`).join('')}
+    <div class="setting">
+      <div class="setting-label">${label}</div>
+      <div class="seg" role="group" aria-label="${esc(label)}">
+        ${options.map(([value, text]) => `
+          <button data-setting="${key}" data-value='${JSON.stringify(value)}' class="${value === current ? 'on' : ''}" aria-pressed="${value === current}">${text}</button>`).join('')}
       </div>
+    </div>`;
+}
+function onOff(key, current, label, hint) {
+  return `
+    <button class="toggle-row setting" data-setting="${key}" data-value='${JSON.stringify(!current)}' aria-pressed="${current}">
+      <span class="toggle ${current ? 'on' : ''}" aria-hidden="true"></span>
+      <span>${label}${hint ? `<span class="muted small block-hint">${hint}</span>` : ''}</span>
+    </button>`;
+}
+const time = v => (v ? mmss(v) : 'Off');
+
+function workoutSettingsHTML() {
+  const st = Store.settings;
+  return `
+    <h2 class="section-label">Workout</h2>
+    <div class="card">
+      ${choices('restSeconds', [0, 60, 90, 120, 180].map(v => [v, time(v)]), st.restSeconds, 'Rest after working sets')}
+      ${choices('warmupRestSeconds', [[null, 'Same'], [30, '0:30'], [45, '0:45'], [60, '1:00'], [90, '1:30']], st.warmupRestSeconds, 'Rest after warm-up sets')}
+      ${choices('restAlert', [['sound', 'Sound'], ['vibrate', 'Vibrate'], ['both', 'Both']], st.restAlert, 'When rest is over')}
+      <p class="muted small setting-note">iPhones can't vibrate for web apps, and the sound follows your ringer switch. Alerts only play while Rep Book is open.</p>
+      ${onOff('keepAwake', st.keepAwake, 'Keep the screen on during a workout')}
+    </div>`;
+}
+
+const PLATE_SIZES = [55, 45, 35, 25, 15, 10, 5, 2.5, 1.25];
+function weightSettingsHTML() {
+  const st = Store.settings;
+  return `
+    <h2 class="section-label">Weights</h2>
+    <div class="card">
+      ${choices('weightStep', [[2.5, '2.5'], [5, '5'], [10, '10']], st.weightStep, 'The − / + buttons change weight by (lbs)')}
+      ${choices('barWeight', [[45, '45'], [35, '35'], [25, '25'], [15, '15']], st.barWeight, 'Bar weight (lbs)')}
+      <div class="setting">
+        <div class="setting-label">Plates you own (lbs)</div>
+        <div class="chip-grid">
+          ${PLATE_SIZES.map(p => `
+            <button class="plate-chip ${st.plates.includes(p) ? 'on' : ''}" data-plate="${p}" aria-pressed="${st.plates.includes(p)}">${p}</button>`).join('')}
+        </div>
+      </div>
+      ${onOff('autoIncrease', st.autoIncrease, 'Suggest more weight', 'When you hit every target rep, the next workout starts heavier.')}
+      ${st.autoIncrease ? `
+        ${choices('incUpper', [[2.5, '+2.5'], [5, '+5'], [10, '+10']], st.incUpper, 'Upper-body lifts')}
+        ${choices('incLower', [[5, '+5'], [10, '+10'], [15, '+15'], [20, '+20']], st.incLower, 'Leg and hip lifts (squats, deadlifts…)')}` : ''}
+    </div>`;
+}
+
+function goalSettingsHTML() {
+  const st = Store.settings;
+  return `
+    <h2 class="section-label">Goal</h2>
+    <div class="card">
+      ${choices('weeklyGoal', [[0, 'None'], [2, '2'], [3, '3'], [4, '4'], [5, '5'], [6, '6']], st.weeklyGoal, 'Workouts per week (weeks start Sunday)')}
+    </div>`;
+}
+
+function displaySettingsHTML() {
+  return `
+    <h2 class="section-label">Display</h2>
+    <div class="card">
+      ${choices('textSize', Object.entries(TEXT_SIZES).map(([v, t]) => [Number(v), t]), textSize(), 'Text size (this device only)')}
     </div>`;
 }
 
 function aboutHTML() {
-  return `<p class="muted small about">Rep Book · weights in pounds</p>`;
+  return `<p class="muted small about">Rep Book · weights in pounds<br>Settings sync between your devices, except text size.</p>`;
 }
 
 viewEl.addEventListener('click', e => {
-  const btn = e.target.closest('[data-s-action="rest"]');
+  const btn = e.target.closest('[data-setting], [data-plate]');
   if (!btn) return;
-  const v = Number(btn.dataset.v);
-  setRestSeconds(v);
-  if (!v) { restEndsAt = null; saveRestEnd(); }
+  if (btn.dataset.plate) {
+    const p = Number(btn.dataset.plate);
+    const plates = Store.settings.plates;
+    Store.setSetting('plates', plates.includes(p) ? plates.filter(x => x !== p) : [...plates, p]);
+  } else {
+    const key = btn.dataset.setting;
+    const value = JSON.parse(btn.dataset.value);
+    if (key === 'textSize') applyTextSize(value);
+    else Store.setSetting(key, value);
+    if (key === 'restSeconds' && !value) { restEndsAt = null; saveRestEnd(); }
+  }
   renderSettings();
 });
 

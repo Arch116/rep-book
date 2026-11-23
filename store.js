@@ -15,7 +15,25 @@ const Store = (() => {
   // activeChangedAt: when `active` last changed (so the newest device wins)
   // deleted: ids of deleted routines/workouts (so a deletion on one device
   //          isn't undone by the other device's older copy)
-  const empty = () => ({ routines: [], sessions: [], active: null, activeChangedAt: null, deleted: [] });
+  // settings: your choices on the Settings tab (only the ones you've changed);
+  //           settingsChangedAt says which device changed them last
+  const empty = () => ({ routines: [], sessions: [], active: null, activeChangedAt: null, deleted: [],
+    settings: {}, settingsChangedAt: null });
+
+  // What each setting is until you change it.
+  const DEFAULT_SETTINGS = {
+    restSeconds: 90,          // rest after a working set (0 = no timer)
+    warmupRestSeconds: null,  // rest after a warm-up set (null = same as working)
+    restAlert: 'both',        // 'sound' | 'vibrate' | 'both'
+    keepAwake: true,          // stop the screen locking during a workout
+    weightStep: 5,            // what the − / + buttons change the weight by
+    barWeight: 45,
+    plates: [45, 35, 25, 10, 5, 2.5], // plate sizes you own (pairs)
+    autoIncrease: true,       // suggest more weight after hitting every rep
+    incUpper: 5,
+    incLower: 10,
+    weeklyGoal: 4,            // workouts per week (0 = no goal)
+  };
 
   function load() {
     try {
@@ -27,6 +45,16 @@ const Store = (() => {
   }
 
   let data = load();
+
+  // The rest timer used to be saved only on this device: carry it over once.
+  try {
+    const oldRest = localStorage.getItem('workout-rest-seconds');
+    if (oldRest !== null) {
+      if (data.settings.restSeconds === undefined) data.settings.restSeconds = Number(oldRest);
+      writeLocal();
+      localStorage.removeItem('workout-rest-seconds');
+    }
+  } catch {}
   let onChange = null; // set by sync.js: called after every local change
 
   function writeLocal() {
@@ -50,6 +78,13 @@ const Store = (() => {
     getData() { return data; },
     replaceData(next) { data = { ...empty(), ...next }; writeLocal(); },
     set onChange(fn) { onChange = fn; },
+
+    get settings() { return { ...DEFAULT_SETTINGS, ...data.settings }; },
+    setSetting(key, value) {
+      data.settings = { ...data.settings, [key]: value };
+      data.settingsChangedAt = now();
+      save();
+    },
 
     getRoutine(routineId) {
       return data.routines.find(r => r.id === routineId);
@@ -81,7 +116,7 @@ const Store = (() => {
       const s = data.active;
       s.finishedAt = now();
       s.exercises = s.exercises
-        .map(({ last, ...ex }) => ({ ...ex, sets: ex.sets.filter(set => set.done) }))
+        .map(({ last, bump, ...ex }) => ({ ...ex, sets: ex.sets.filter(set => set.done) }))
         .filter(ex => ex.sets.length);
       data.sessions.push(s);
       data.active = null;
