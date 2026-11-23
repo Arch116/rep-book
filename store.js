@@ -1,18 +1,21 @@
 // Store: the one place that saves and loads data.
-// For now it saves in this browser (localStorage). In a later step we swap the
-// inside of this file for Supabase so the phone and laptop share the same data;
-// the rest of the app won't need to change.
+// Everything is always saved in this browser first (so the app works with no
+// signal). When you're signed in, sync.js copies it to and from Supabase so
+// your phone and laptop share the same data.
 
 const Store = (() => {
   const KEY = 'workout-app-v1';
 
   // Shape of everything we save:
-  // routines: [{ id, name, exercises: [{ id, name, type, sets: [{ warmup, reps, weight, seconds }] }] }]
+  // routines: [{ id, name, updatedAt, exercises: [{ id, name, type, sets: [{ warmup, reps, weight, seconds }] }] }]
   //   type is 'weight' | 'bodyweight' | 'time'
   // sessions: [{ id, routineId, routineName, startedAt, finishedAt, notes,
   //              exercises: [{ id, name, type, note, sets: [{ warmup, target, reps, weight, seconds, done }] }] }]
   // active: the workout in progress (same shape as a session), or null
-  const empty = () => ({ routines: [], sessions: [], active: null });
+  // activeChangedAt: when `active` last changed (so the newest device wins)
+  // deleted: ids of deleted routines/workouts (so a deletion on one device
+  //          isn't undone by the other device's older copy)
+  const empty = () => ({ routines: [], sessions: [], active: null, activeChangedAt: null, deleted: [] });
 
   function load() {
     try {
@@ -24,11 +27,17 @@ const Store = (() => {
   }
 
   let data = load();
+  let onChange = null; // set by sync.js: called after every local change
 
-  function save() {
+  function writeLocal() {
     localStorage.setItem(KEY, JSON.stringify(data));
   }
+  function save() {
+    writeLocal();
+    onChange?.();
+  }
 
+  const now = () => new Date().toISOString();
   const id = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 
   return {
@@ -37,11 +46,17 @@ const Store = (() => {
     get sessions() { return data.sessions; },
     save,
 
+    // Used by sync.js.
+    getData() { return data; },
+    replaceData(next) { data = { ...empty(), ...next }; writeLocal(); },
+    set onChange(fn) { onChange = fn; },
+
     getRoutine(routineId) {
       return data.routines.find(r => r.id === routineId);
     },
     // Adds a new routine, or replaces the existing one with the same id.
     saveRoutine(routine) {
+      routine.updatedAt = now();
       const i = data.routines.findIndex(r => r.id === routine.id);
       if (i >= 0) data.routines[i] = routine;
       else data.routines.push(routine);
@@ -49,6 +64,7 @@ const Store = (() => {
     },
     deleteRoutine(routineId) {
       data.routines = data.routines.filter(r => r.id !== routineId);
+      data.deleted.push(routineId);
       save();
     },
 
@@ -57,23 +73,26 @@ const Store = (() => {
     get active() { return data.active || null; },
     setActive(session) {
       data.active = session;
+      data.activeChangedAt = now();
       save();
     },
     // Moves the workout into history, keeping only sets that were ticked off.
     finishActive() {
       const s = data.active;
-      s.finishedAt = new Date().toISOString();
+      s.finishedAt = now();
       s.exercises = s.exercises
         .map(({ last, ...ex }) => ({ ...ex, sets: ex.sets.filter(set => set.done) }))
         .filter(ex => ex.sets.length);
       data.sessions.push(s);
       data.active = null;
+      data.activeChangedAt = now();
       save();
       return s;
     },
 
     deleteSession(sessionId) {
       data.sessions = data.sessions.filter(s => s.id !== sessionId);
+      data.deleted.push(sessionId);
       save();
     },
 

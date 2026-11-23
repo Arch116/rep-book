@@ -10,6 +10,7 @@
 <body>
   <header class="topbar">
     <h1 id="page-title">Routines</h1>
+    <a id="sync-badge" class="sync-badge" href="#/account" hidden><i aria-hidden="true"></i><span></span></a>
   </header>
 
   <main id="view" class="view"></main>
@@ -38,10 +39,15 @@
 
   <!-- Chart.js draws the progress charts. -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <!-- Supabase: online copy of your data and sign-in. -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+  <script src="config.js"></script>
   <script src="store.js"></script>
+  <script src="sync.js"></script>
   <script src="app.js"></script>
   <script src="workout.js"></script>
   <script src="history.js"></script>
   <script src="progress.js"></script>
+  <script src="account.js"></script>
 </body>
 </html>

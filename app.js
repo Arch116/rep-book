@@ -210,26 +210,36 @@ function saveDraft() {
   location.hash = '#/routines';
 }
 
-/* ---------- Placeholder screens ---------- */
-
 /* ---------- Router ---------- */
 
-function route() {
+function route({ keepScroll = false } = {}) {
   const [tab, param, extra] = location.hash.replace('#/', '').split('/');
-  const name = ['routines', 'workout', 'history'].includes(tab) ? tab : 'routines';
+  const name = ['routines', 'workout', 'history', 'account'].includes(tab) ? tab : 'routines';
 
   if (!(name === 'routines' && param)) draft = null; // leaving the editor discards the draft
 
   if (name === 'routines' && param) openEditor(param);
   else if (name === 'routines') renderRoutineList();
   else if (name === 'workout') renderWorkout();
+  else if (name === 'account') renderAccount();
   else renderHistory(param, extra);
 
   document.querySelectorAll('.tabbar a').forEach(a =>
     a.classList.toggle('active', a.dataset.tab === name));
-  window.scrollTo(0, 0);
+  if (!keepScroll) window.scrollTo(0, 0);
 }
 
-window.addEventListener('hashchange', route);
+// When sync brings in changes from your other device, redraw the screen,
+// unless you're in the middle of typing or editing a routine.
+window.onSyncedData = () => {
+  const typing = ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName);
+  if (!typing && !draft) route({ keepScroll: true });
+  updateWorkoutDot();
+};
+
+window.addEventListener('hashchange', () => route());
 // Wait until every script file has loaded (workout.js comes after this one).
-window.addEventListener('DOMContentLoaded', route);
+window.addEventListener('DOMContentLoaded', () => {
+  route();
+  Sync.init();
+});
