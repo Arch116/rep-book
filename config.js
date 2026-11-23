@@ -4,6 +4,6 @@
 // that only let you read and write your own data.
 // Leave them empty and the app simply saves on this device only.
 window.APP_CONFIG = {
-  supabaseUrl: '',
-  supabaseKey: '',
+  supabaseUrl: 'https://dqsirthotcxennhwdcmx.supabase.co',
+  supabaseKey: 'sb_publishable_JTI5XarBPyjJqWpRAQmwKw_R9OhM6-w',
 };
