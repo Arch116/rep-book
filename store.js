@@ -72,6 +72,11 @@ const Store = (() => {
       return s;
     },
 
+    deleteSession(sessionId) {
+      data.sessions = data.sessions.filter(s => s.id !== sessionId);
+      save();
+    },
+
     // The most recent time this exercise was done (matched by id, then by name).
     lastPerformance(exercise) {
       const name = exercise.name.trim().toLowerCase();

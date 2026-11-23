@@ -212,14 +212,6 @@ function saveDraft() {
 
 /* ---------- Placeholder screens ---------- */
 
-function renderHistory() {
-  titleEl.textContent = 'History';
-  viewEl.innerHTML = `
-    <div class="empty">
-      <p>Your finished workouts and progress charts will show here.<br>(Coming in steps 4 and 5)</p>
-    </div>`;
-}
-
 /* ---------- Router ---------- */
 
 function route() {
@@ -231,7 +223,7 @@ function route() {
   if (name === 'routines' && param) openEditor(param);
   else if (name === 'routines') renderRoutineList();
   else if (name === 'workout') renderWorkout();
-  else renderHistory();
+  else renderHistory(param);
 
   document.querySelectorAll('.tabbar a').forEach(a =>
     a.classList.toggle('active', a.dataset.tab === name));

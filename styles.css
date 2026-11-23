@@ -340,6 +340,40 @@ button.routine-card {
 /* Extra room at the bottom so the rest bar never covers the last buttons. */
 .view { padding-bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom) + 96px); }
 
+/* History tab */
+.section-label {
+  margin: 20px 0 10px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.section-label:first-child { margin-top: 0; }
+.history-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.history-top .small { flex: none; }
+
+.back-link {
+  display: inline-block;
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 600;
+  margin-bottom: 8px;
+  padding: 6px 0;
+}
+.note-text { margin-top: 6px; white-space: pre-wrap; line-height: 1.4; }
+.detail-rows { margin-top: 12px; }
+.detail-row {
+  display: grid;
+  grid-template-columns: 36px 1fr 1fr auto;
+  gap: 8px;
+  align-items: center;
+  padding: 4px 0;
+}
+.detail-row.timed { grid-template-columns: 36px 1fr auto; }
+.detail-row .set-tag.static { height: 34px; }
+.detail-row .small { text-align: right; white-space: nowrap; }
+
 /* Dot on the Workout tab while a workout is in progress. */
 .tabbar a { position: relative; }
 .tabbar a.live::after {
