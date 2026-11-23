@@ -31,6 +31,7 @@ function volume(session) {
 
 function renderHistory(sessionId, extra) {
   if (sessionId === 'progress') return renderProgress(extra);
+  if (sessionId === 'records') return renderRecords();
   if (sessionId) return renderSessionDetail(sessionId);
 
   const sessions = [...Store.sessions].sort((a, b) => b.startedAt.localeCompare(a.startedAt));
@@ -43,7 +44,7 @@ function renderHistory(sessionId, extra) {
     return;
   }
 
-  let html = historySwitch('workouts');
+  let html = historySwitch('workouts') + calendarHTML(sessions);
   let month = '';
   for (const s of sessions) {
     const m = monthLabel(s.startedAt);
@@ -118,4 +119,54 @@ viewEl.addEventListener('click', e => {
   if (!confirm('Delete this workout from your history? This can’t be undone.')) return;
   Store.deleteSession(btn.dataset.id);
   location.hash = '#/history';
+});
+
+/* ---------- Calendar ---------- */
+// A month grid (weeks start Sunday) with workout days highlighted.
+
+let calMonth = (() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1); })();
+
+function calendarHTML(sessions) {
+  const year = calMonth.getFullYear(), month = calMonth.getMonth();
+  const byDay = new Map();
+  for (const s of sessions) {
+    const d = new Date(s.startedAt);
+    if (d.getFullYear() === year && d.getMonth() === month) {
+      const k = d.getDate();
+      if (!byDay.has(k)) byDay.set(k, []);
+      byDay.get(k).push(s);
+    }
+  }
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const lead = new Date(year, month, 1).getDay();
+  const today = new Date();
+  const isToday = d => today.getFullYear() === year && today.getMonth() === month && today.getDate() === d;
+  const cells = [];
+  for (let i = 0; i < lead; i++) cells.push('<span></span>');
+  for (let d = 1; d <= daysInMonth; d++) {
+    const list = byDay.get(d);
+    const label = list ? `${list.map(s => s.routineName).join(', ')} on ${monthLabel(new Date(year, month, d).toISOString()).split(' ')[0]} ${d}` : '';
+    cells.push(list
+      ? `<a class="cal-day on ${isToday(d) ? 'today' : ''}" href="#/history/${list[0].id}" aria-label="${esc(label)}">${d}</a>`
+      : `<span class="cal-day ${isToday(d) ? 'today' : ''}">${d}</span>`);
+  }
+  const count = [...byDay.values()].reduce((n, l) => n + l.length, 0);
+  return `
+    <div class="card calendar">
+      <div class="cal-head">
+        <button class="icon-btn" data-cal="-1" aria-label="Previous month">‹</button>
+        <div><strong>${calMonth.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}</strong>
+          <span class="muted small"> · ${count} workout${count === 1 ? '' : 's'}</span></div>
+        <button class="icon-btn" data-cal="1" aria-label="Next month">›</button>
+      </div>
+      <div class="cal-grid cal-week">${['S', 'M', 'T', 'W', 'T', 'F', 'S'].map(d => `<span>${d}</span>`).join('')}</div>
+      <div class="cal-grid">${cells.join('')}</div>
+    </div>`;
+}
+
+viewEl.addEventListener('click', e => {
+  const btn = e.target.closest('[data-cal]');
+  if (!btn) return;
+  calMonth = new Date(calMonth.getFullYear(), calMonth.getMonth() + Number(btn.dataset.cal), 1);
+  route({ keepScroll: true });
 });

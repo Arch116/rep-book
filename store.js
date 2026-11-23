@@ -18,8 +18,9 @@ const Store = (() => {
   // settings: your choices on the Settings tab (only the ones you've changed);
   //           settingsChangedAt says which device changed them last
   // exerciseNotes: { "bench press": { text, updatedAt } } pinned notes shown every time
+  // bodyweights: [{ id, date, lbs, updatedAt }] one entry per day at most
   const empty = () => ({ routines: [], sessions: [], active: null, activeChangedAt: null, deleted: [],
-    settings: {}, settingsChangedAt: null, exerciseNotes: {} });
+    settings: {}, settingsChangedAt: null, exerciseNotes: {}, bodyweights: [] });
 
   // What each setting is until you change it.
   const DEFAULT_SETTINGS = {
@@ -80,6 +81,48 @@ const Store = (() => {
     getData() { return data; },
     replaceData(next) { data = { ...empty(), ...next }; writeLocal(); },
     set onChange(fn) { onChange = fn; },
+
+    // Body weight log, oldest first.
+    get bodyweights() { return [...(data.bodyweights || [])].sort((a, b) => a.date.localeCompare(b.date)); },
+    logBodyweight(lbs) {
+      const today = new Date().toDateString();
+      const list = data.bodyweights || [];
+      const existing = list.find(b => new Date(b.date).toDateString() === today);
+      if (existing) { existing.lbs = lbs; existing.updatedAt = now(); }
+      else list.push({ id: id(), date: now(), lbs, updatedAt: now() });
+      data.bodyweights = list;
+      save();
+    },
+    deleteBodyweight(entryId) {
+      data.bodyweights = (data.bodyweights || []).filter(b => b.id !== entryId);
+      data.deleted.push(entryId);
+      save();
+    },
+
+    // Renames an exercise everywhere: past workouts, routines, the workout in
+    // progress and its pinned note. Renaming to an existing name combines them.
+    renameExercise(oldName, newName) {
+      const from = oldName.trim().toLowerCase();
+      const same = ex => ex.name.trim().toLowerCase() === from;
+      const stamp = now();
+      for (const s of data.sessions) {
+        if (s.exercises.some(same)) { s.exercises.forEach(ex => { if (same(ex)) ex.name = newName; }); s.updatedAt = stamp; }
+      }
+      for (const r of data.routines) {
+        if (r.exercises.some(same)) { r.exercises.forEach(ex => { if (same(ex)) ex.name = newName; }); r.updatedAt = stamp; }
+      }
+      if (data.active?.exercises.some(same)) {
+        data.active.exercises.forEach(ex => { if (same(ex)) ex.name = newName; });
+        data.activeChangedAt = stamp;
+      }
+      const to = newName.trim().toLowerCase();
+      const note = data.exerciseNotes?.[from];
+      if (note && to !== from) {
+        if (!data.exerciseNotes[to]?.text) data.exerciseNotes[to] = { ...note, updatedAt: stamp };
+        data.exerciseNotes[from] = { text: '', updatedAt: stamp };
+      }
+      save();
+    },
 
     // Pinned notes for an exercise (by name), e.g. "elbows tucked".
     exerciseNote(name) { return data.exerciseNotes?.[name.trim().toLowerCase()]?.text || ''; },

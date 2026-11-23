@@ -11,9 +11,45 @@ function backupSectionHTML() {
       <div class="editor-actions">
         <button class="btn secondary block" data-b-action="export">Download backup</button>
         <button class="btn secondary block" data-b-action="import">Restore from a backup…</button>
+        <button class="btn secondary block" data-b-action="csv">Download spreadsheet (CSV)</button>
       </div>
       <input type="file" id="backup-file" accept=".json,application/json" hidden>
     </div>`;
+}
+
+function todayStamp() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+function saveFile(name, text, type) {
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(new Blob([text], { type }));
+  link.download = name;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+}
+
+// Every set you've logged, one row each, for Excel or Google Sheets.
+function downloadCSV() {
+  const cell = v => {
+    const t = v === null || v === undefined ? '' : String(v);
+    return /[",\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t;
+  };
+  const rows = [['Date', 'Time', 'Routine', 'Exercise', 'Type', 'Set', 'Warm-up', 'Reps', 'Weight (lbs)', 'Seconds', 'Reps left', 'Target reps', 'Target weight', 'Exercise note', 'Workout note']];
+  const sessions = [...Store.sessions].sort((a, b) => a.startedAt.localeCompare(b.startedAt));
+  for (const s of sessions) {
+    const d = new Date(s.startedAt);
+    const date = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const time = d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+    for (const ex of s.exercises) {
+      ex.sets.forEach((set, i) => rows.push([date, time, s.routineName, ex.name, ex.type, i + 1, set.warmup ? 'yes' : '',
+        set.reps, set.weight, set.seconds, set.rpe ? 10 - set.rpe : '', set.target?.reps, set.target?.weight,
+        i === 0 ? ex.note : '', i === 0 && ex === s.exercises[0] ? s.notes : '']));
+    }
+  }
+  saveFile(`rep-book-sets-${todayStamp()}.csv`, rows.map(r => r.map(cell).join(',')).join('\n'), 'text/csv');
 }
 
 function downloadBackup() {
@@ -60,7 +96,7 @@ function restoreBackup(text) {
   const sessions = data.sessions.filter(x => !have.has(x.id)).map(revive).map(s =>
     newIds.has(s.routineId) ? { ...s, routineId: newIds.get(s.routineId) } : s);
 
-  Store.replaceData(Sync.merge(local, { routines, sessions }));
+  Store.replaceData(Sync.merge(local, { routines, sessions, bodyweights: data.bodyweights || [], exerciseNotes: data.exerciseNotes || {} }));
   Store.save(); // also syncs to your other devices
   accountMessage = 'Backup restored.';
   renderAccount();
@@ -71,6 +107,7 @@ viewEl.addEventListener('click', e => {
   const btn = e.target.closest('[data-b-action]');
   if (!btn) return;
   if (btn.dataset.bAction === 'export') downloadBackup();
+  else if (btn.dataset.bAction === 'csv') downloadCSV();
   else viewEl.querySelector('#backup-file').click();
 });
 

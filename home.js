@@ -125,5 +125,22 @@ function renderHome() {
       <span class="chevron" aria-hidden="true">›</span>
     </a>` : '';
 
-  viewEl.innerHTML = hero + weekTiles + bestList + lastCard;
+  // 5. Body weight
+  const bw = Store.bodyweights.at(-1);
+  const bwCard = `
+    <h2 class="section-label">Body weight</h2>
+    <div class="card routine-card">
+      <a class="home-bw" href="#/history/progress/${BODYWEIGHT_KEY}">
+        <div class="routine-name">${bw ? `${bw.lbs} lbs` : 'Not logged yet'}</div>
+        <div class="muted small">${bw ? daysAgoText(bw.date) : 'Log it to see a chart over time'}</div>
+      </a>
+      <button class="btn secondary" data-home-action="log-bw">Log</button>
+    </div>`;
+
+  viewEl.innerHTML = hero + weekTiles + bestList + lastCard + bwCard;
 }
+
+viewEl.addEventListener('click', e => {
+  if (!e.target.closest('[data-home-action="log-bw"]')) return;
+  if (logBodyweightPrompt()) renderHome();
+});

@@ -73,7 +73,9 @@ const Sync = (() => {
       if (!exerciseNotes[k] || (v.updatedAt || '') > (exerciseNotes[k].updatedAt || '')) exerciseNotes[k] = v;
     }
 
-    return { routines, sessions, deleted, active: active || null, activeChangedAt, settings, settingsChangedAt, exerciseNotes };
+    const bodyweights = combine(a.bodyweights, b.bodyweights, newer);
+
+    return { routines, sessions, deleted, active: active || null, activeChangedAt, settings, settingsChangedAt, exerciseNotes, bodyweights };
   }
 
   async function syncNow() {

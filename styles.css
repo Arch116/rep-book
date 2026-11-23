@@ -562,3 +562,20 @@ select {
 }
 .effort-row button.on { background: var(--accent); border-color: var(--accent); color: var(--accent-text); font-weight: 600; }
 .superset-toggle { padding-top: 10px; padding-bottom: 0; }
+
+/* History: calendar */
+.calendar { padding: 12px; }
+.cal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; text-align: center; }
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; }
+.cal-week span { color: var(--muted); font-size: 0.72rem; padding-bottom: 2px; }
+.cal-day {
+  display: flex; align-items: center; justify-content: center; aspect-ratio: 1; max-height: 40px;
+  border-radius: 10px; font-size: 0.85rem; color: var(--muted); text-decoration: none;
+}
+.cal-day.on { background: var(--accent); color: var(--accent-text); font-weight: 700; }
+.cal-day.today { outline: 1.5px solid var(--accent); outline-offset: -1.5px; }
+.page-seg a { font-size: 0.85rem; }
+.rename-link { margin: -4px 0 12px; padding: 4px 0; }
+.home-bw { flex: 1; min-width: 0; color: inherit; text-decoration: none; }
+.routine-card .btn { flex: none; width: auto; padding: 0 18px; min-height: 40px; }
+[data-p-action="log-bw"] { margin-bottom: 14px; }
