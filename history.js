@@ -88,7 +88,7 @@ function renderSessionDetail(sessionId) {
       <div class="detail-row ${isTime ? 'timed' : ''}">
         <span class="set-tag static ${set.warmup ? 'warm' : ''}">${set.warmup ? 'W' : ++working}</span>
         ${isTime
-          ? `<span>${set.seconds ?? '–'} sec</span>`
+          ? `<span>${set.seconds ?? '–'} sec</span><span>${set.weight ? `${set.weight} lbs` : ''}</span>`
           : `<span>${set.reps ?? '–'} reps</span><span>${ex.type === 'bodyweight'
               ? (set.weight ? `+${set.weight} lbs` : 'bodyweight')
               : `${set.weight ?? '–'} lbs`}</span>`}

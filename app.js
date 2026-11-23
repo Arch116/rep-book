@@ -86,8 +86,7 @@ function setRow(ex, exIndex, set, setIndex, workingNumber) {
   const amount = isTime
     ? `<input type="number" inputmode="numeric" min="0" data-field="seconds" data-ex="${exIndex}" data-set="${setIndex}" value="${set.seconds ?? ''}" aria-label="Seconds">`
     : `<input type="number" inputmode="numeric" min="0" data-field="reps" data-ex="${exIndex}" data-set="${setIndex}" value="${set.reps ?? ''}" aria-label="Reps">`;
-  const weight = isTime ? '' :
-    `<input type="number" inputmode="decimal" min="0" step="any" data-field="weight" data-ex="${exIndex}" data-set="${setIndex}" value="${set.weight ?? ''}" placeholder="${ex.type === 'bodyweight' ? '0' : ''}" aria-label="${ex.type === 'bodyweight' ? 'Added weight in pounds' : 'Weight in pounds'}">`;
+  const weight = `<input type="number" inputmode="decimal" min="0" step="any" data-field="weight" data-ex="${exIndex}" data-set="${setIndex}" value="${set.weight ?? ''}" placeholder="${ex.type === 'weight' ? '' : isTime ? '–' : '0'}" aria-label="${ex.type === 'weight' ? 'Weight in pounds' : isTime ? 'Weight carried or held in pounds (optional)' : 'Added weight in pounds'}">`;
   return `
     <div class="set-row ${isTime ? 'timed' : ''}">
       <button class="set-tag ${set.warmup ? 'warm' : ''}" data-action="toggle-warm" data-ex="${exIndex}" data-set="${setIndex}"
@@ -103,7 +102,7 @@ function exerciseCard(ex, i, count) {
   const rows = ex.sets.map((s, j) => setRow(ex, i, s, j, s.warmup ? '' : ++working)).join('');
   const isTime = ex.type === 'time';
   const headers = isTime
-    ? '<span>Set</span><span>Seconds</span><span></span>'
+    ? '<span>Set</span><span>Seconds</span><span>lbs</span><span></span>'
     : `<span>Set</span><span>Reps</span><span>${ex.type === 'bodyweight' ? '+ lbs' : 'lbs'}</span><span></span>`;
   return `
     <div class="card exercise">
@@ -120,6 +119,9 @@ function exerciseCard(ex, i, count) {
       ${ex.type === 'weight' ? `
         <button class="toggle-row" data-action="barbell" data-ex="${i}" aria-pressed="${isBarbell(ex)}">
           <span class="toggle ${isBarbell(ex) ? 'on' : ''}" aria-hidden="true"></span>Barbell: show plates to load
+        </button>
+        <button class="toggle-row" data-action="auto-warmups" data-ex="${i}" aria-pressed="${!!ex.autoWarmups}">
+          <span class="toggle ${ex.autoWarmups ? 'on' : ''}" aria-hidden="true"></span>Add warm-up sets automatically
         </button>` : ''}
       <div class="set-row head ${isTime ? 'timed' : ''}">${headers}</div>
       ${rows}
@@ -187,6 +189,9 @@ viewEl.addEventListener('click', e => {
       break;
     case 'barbell':
       ex.barbell = !isBarbell(ex);
+      break;
+    case 'auto-warmups':
+      ex.autoWarmups = !ex.autoWarmups;
       break;
     case 'superset':
       ex.supersetNext = !ex.supersetNext;

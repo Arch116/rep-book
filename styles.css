@@ -211,7 +211,7 @@ input::placeholder { color: var(--muted); }
   align-items: center;
   margin-bottom: 8px;
 }
-.set-row.timed { grid-template-columns: 44px 1fr 40px; }
+
 .set-row.head { color: var(--muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px; }
 .set-row.head span { text-align: center; }
 .set-row input { text-align: center; }
@@ -308,7 +308,7 @@ button.routine-card {
   align-items: center;
   margin-bottom: 8px;
 }
-.log-row.timed { grid-template-columns: 32px 54px minmax(0, 1fr) 40px; }
+
 .log-row.head { color: var(--muted); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px; }
 .log-row.head span { text-align: center; }
 .log-row input { text-align: center; padding: 8px 4px; }
@@ -399,7 +399,7 @@ button.routine-card {
   align-items: center;
   padding: 4px 0;
 }
-.detail-row.timed { grid-template-columns: 36px 1fr auto; }
+
 .detail-row .set-tag.static { height: 34px; }
 .detail-row .small { text-align: right; white-space: nowrap; }
 

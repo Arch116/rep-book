@@ -87,6 +87,7 @@ function weightSettingsHTML() {
     <div class="card">
       ${choices('weightStep', [[2.5, '2.5'], [5, '5'], [10, '10']], st.weightStep, 'The − / + buttons change weight by (lbs)')}
       ${choices('barWeight', [[45, '45'], [35, '35'], [25, '25'], [15, '15']], st.barWeight, 'Bar weight (lbs)')}
+      ${choices('maxDumbbell', [[0, 'None'], [25, '25'], [50, '50'], [75, '75'], [100, '100']], st.maxDumbbell, 'Heaviest dumbbell you own (lbs)')}
       <div class="setting">
         <div class="setting-label">Plates you own (lbs)</div>
         <div class="chip-grid">

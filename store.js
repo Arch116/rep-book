@@ -34,6 +34,7 @@ const Store = (() => {
     autoIncrease: true,       // suggest more weight after hitting every rep
     incUpper: 5,
     incLower: 10,
+    maxDumbbell: 0,           // heaviest dumbbell you own (0 = no limit)
     weeklyGoal: 4,            // workouts per week (0 = no goal)
     askEffort: true,          // ask "reps left in the tank" after each set
     effortEarly: '2-3',       // aim: reps left on every working set but the last

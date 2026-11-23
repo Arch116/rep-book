@@ -30,7 +30,10 @@ const mmss = secs => `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '
 
 // How a set reads in text, e.g. "8 × 135", "10 +25", "60s".
 function fmtSet(type, s) {
-  if (type === 'time') return `${s.seconds ?? '–'}s`;
+  if (type === 'time') {
+    if (s.seconds == null) return s.weight ? `${s.weight} lbs` : '–';
+    return `${s.seconds}s${s.weight ? ` @ ${s.weight}` : ''}`;
+  }
   if (type === 'bodyweight') return `${s.reps ?? '–'}${s.weight ? ` +${s.weight}` : ''}`;
   return `${s.reps ?? '–'} × ${s.weight ?? '–'}`;
 }
@@ -91,7 +94,8 @@ function progression(ex, last) {
   if (!st.autoIncrease || ex.type !== 'weight' || !last) return { bump: 0, note: '' };
   const work = last.sets.filter(s => !s.warmup);
   if (!work.length) return { bump: 0, note: '' };
-  const inc = isLowerBody(ex.name) ? st.incLower : st.incUpper;
+  // Bigger jumps only for barbell leg and hip lifts; dumbbell work goes up slower.
+  const inc = isLowerBody(ex.name) && isBarbell(ex) ? st.incLower : st.incUpper;
   const missed = work.some(s => s.target?.reps && (s.reps ?? 0) < s.target.reps);
   if (missed) return { bump: 0, note: 'Same weight: hit all your target reps first' };
   if (!work.every(s => s.target?.reps)) return { bump: 0, note: '' };
@@ -106,12 +110,23 @@ function progression(ex, last) {
     }
     const [, maxLastLeft] = effortRange(st.effortLast);
     const easyLast = lastSet.rpe && repsLeft(lastSet) > maxLastLeft + 1;
-    if (easyLast) return { bump: inc, note: `↑ +${inc} lbs: even your last set had reps to spare` };
+    if (easyLast) return capped(ex, work, { bump: inc, note: `↑ +${inc} lbs: even your last set had reps to spare` });
   } else if (work.filter(s => s.rpe).length) {
     const rated = work.filter(s => s.rpe);
     if (rated.reduce((n, s) => n + s.rpe, 0) / rated.length >= 9.5) return { bump: 0, note: 'Same weight: last time was all-out' };
   }
-  return { bump: inc, note: `↑ +${inc} lbs: you hit every rep last time` };
+  return capped(ex, work, { bump: inc, note: `↑ +${inc} lbs: you hit every rep last time` });
+}
+
+// Dumbbell lifts can't go past your heaviest dumbbell: add reps instead.
+const isDumbbell = name => /dumbbell|\bdb\b|goblet|farmer/i.test(name);
+function capped(ex, work, result) {
+  const max = Store.settings.maxDumbbell;
+  const heaviest = Math.max(0, ...work.map(s => s.weight || 0));
+  if (result.bump && max && isDumbbell(ex.name) && heaviest + result.bump > max) {
+    return { bump: 0, note: `You're at your heaviest dumbbell (${max} lbs): go for an extra rep or two instead` };
+  }
+  return result;
 }
 
 // The type an exercise had the last time you did it or planned it.
@@ -160,10 +175,10 @@ function sessionExerciseFrom(name, plannedSets, fallbackType) {
 
 // Warm-up sets leading up to the first working set: bar × 10, then about
 // 40%, 60% and 80% of the working weight, rounded to weights you can load.
-function addWarmups(ex) {
+function addWarmups(ex, { quiet = false } = {}) {
   const work = ex.sets.find(x => !x.warmup);
   const top = work?.weight;
-  if (!top) return alert('Enter the weight for your first working set first.');
+  if (!top) return quiet || alert('Enter the weight for your first working set first.');
   const st = Store.settings;
   const roundTo = 2 * Math.min(...st.plates, 5);
   const round = w => Math.round(w / roundTo) * roundTo;
@@ -224,6 +239,10 @@ function startWorkout(routineId) {
       };
     }),
   };
+  // Main lifts set to "Add warm-up sets automatically" get them from today's weight.
+  r.exercises.forEach((planned, i) => {
+    if (planned.autoWarmups && planned.type === 'weight') addWarmups(session.exercises[i], { quiet: true });
+  });
   Store.setActive(session);
   restEndsAt = null;
   renderWorkout();
@@ -266,10 +285,10 @@ function logRow(ex, exIndex, s, setIndex, workingNumber) {
     ? `<input type="number" inputmode="numeric" min="0" data-w-field="seconds" ${attrs} value="${s.seconds ?? ''}" aria-label="Seconds">`
     : `<input type="number" inputmode="numeric" min="0" data-w-field="reps" ${attrs} value="${s.reps ?? ''}" aria-label="Reps">`;
   const step = Store.settings.weightStep;
-  const weight = isTime ? '' : `
+  const weight = `
     <div class="stepper">
       <button data-w-action="step" data-dir="-1" ${attrs} aria-label="${step} pounds less">−</button>
-      <input type="number" inputmode="decimal" min="0" step="any" data-w-field="weight" ${attrs} value="${s.weight ?? ''}" placeholder="${ex.type === 'bodyweight' ? '0' : ''}" aria-label="Pounds">
+      <input type="number" inputmode="decimal" min="0" step="any" data-w-field="weight" ${attrs} value="${s.weight ?? ''}" placeholder="${ex.type === 'weight' ? '' : isTime ? '–' : '0'}" aria-label="Pounds">
       <button data-w-action="step" data-dir="1" ${attrs} aria-label="${step} pounds more">+</button>
     </div>`;
   const target = s.target ? fmtSet(ex.type, s.target) : '—';
@@ -339,7 +358,7 @@ function sessionExerciseCard(ex, i, all) {
   const superset = ex.supersetNext && next && !next.skipped ? `Superset with ${esc(next.name)}: no rest until after it`
     : prev?.supersetNext && !prev.skipped ? `Superset with ${esc(prev.name)}` : '';
   const head = isTime
-    ? '<span>Set</span><span>Target</span><span>Secs</span><span></span>'
+    ? '<span>Set</span><span>Target</span><span>Secs</span><span>lbs</span><span></span>'
     : `<span>Set</span><span>Target</span><span>Reps</span><span>${ex.type === 'bodyweight' ? '+ lbs' : 'lbs'}</span><span></span>`;
   const more = ex.showTools ? `
     <div class="tool-row">
