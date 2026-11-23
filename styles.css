@@ -1,13 +1,16 @@
-/* Dark, high-contrast look: easy to read under gym lighting. */
+/* Dark, high-contrast look in WVU blue and gold: easy to read under gym lighting. */
 :root {
-  --bg: #111418;
-  --surface: #1b2027;
-  --surface-2: #252b34;
-  --border: #303844;
-  --text: #eef1f5;
-  --muted: #8b95a3;
-  --accent: #4ade80;
-  --accent-text: #0b1a10;
+  /* WVU Mountaineers: Old Gold and Blue. */
+  --bg: #00142e;          /* deep navy */
+  --surface: #0a2246;     /* cards */
+  --surface-2: #12305c;   /* inputs, buttons */
+  --border: #1f4170;
+  --text: #f2f4f8;
+  --muted: #9aabc4;
+  --accent: #eaaa00;      /* WVU Old Gold */
+  --accent-text: #002855; /* WVU Blue, for text on gold */
+  --accent-soft: #2b2a1a; /* faint gold wash (ticked sets, messages) */
+  --accent-line: #7a5f0c;
   --danger: #f87171;
   --radius: 14px;
   --tabbar-h: 64px;
@@ -198,7 +201,7 @@ input::placeholder { color: var(--muted); }
   font-size: 0.85rem;
   cursor: pointer;
 }
-.seg button.on { background: var(--bg); color: var(--text); font-weight: 600; }
+.seg button.on { background: var(--accent); color: var(--accent-text); font-weight: 600; }
 
 .set-row {
   display: grid;
@@ -222,7 +225,7 @@ input::placeholder { color: var(--muted); }
   font-weight: 600;
   cursor: pointer;
 }
-.set-tag.warm { background: #4a3a12; color: #fbbf24; }
+.set-tag.warm { background: #1d4677; color: #bcd6f5; }
 
 .link-btn {
   border: 0;
@@ -265,8 +268,8 @@ button.routine-card {
 }
 
 .toast {
-  background: #12301c;
-  border: 1px solid #1f5c35;
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-line);
   color: var(--accent);
   border-radius: var(--radius);
   padding: 12px 16px;
@@ -325,7 +328,7 @@ button.routine-card {
   cursor: pointer;
 }
 .check.on { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
-.log-row.done input { border-color: #1f5c35; background: #12301c; }
+.log-row.done input { border-color: var(--accent-line); background: var(--accent-soft); }
 
 .ex-note { margin-top: 10px; font-size: 0.9rem; min-height: 40px; }
 
@@ -412,7 +415,7 @@ button.routine-card {
   text-decoration: none;
   font-size: 0.9rem;
 }
-.page-seg a.on { background: var(--bg); color: var(--text); font-weight: 600; }
+.page-seg a.on { background: var(--accent); color: var(--accent-text); font-weight: 600; }
 
 select {
   width: 100%;
