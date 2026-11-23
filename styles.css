@@ -469,3 +469,7 @@ select {
 
 /* Title for screens one level down from a tab (the top bar shows the app name). */
 .screen-title { margin: 0 0 14px; font-size: 1.3rem; }
+
+/* App name with the dumbbell mark (same drawing as the home-screen icon). */
+.brand { display: flex; align-items: center; gap: 10px; }
+.brand-mark { width: 30px; height: 30px; flex: none; fill: none; stroke: var(--accent); stroke-width: 36; stroke-linecap: round; }
