@@ -216,7 +216,8 @@ function saveDraft() {
 
 function route({ keepScroll = false } = {}) {
   const [tab, param, extra] = location.hash.replace('#/', '').split('/');
-  const name = ['home', 'routines', 'workout', 'history', 'account'].includes(tab) ? tab : 'home';
+  const page = tab === 'account' ? 'settings' : tab; // old #/account links open Settings
+  const name = ['home', 'routines', 'workout', 'history', 'settings'].includes(page) ? page : 'home';
 
   if (!(name === 'routines' && param)) draft = null; // leaving the editor discards the draft
 
@@ -224,7 +225,7 @@ function route({ keepScroll = false } = {}) {
   else if (name === 'routines' && param) openEditor(param);
   else if (name === 'routines') renderRoutineList();
   else if (name === 'workout') renderWorkout();
-  else if (name === 'account') renderAccount();
+  else if (name === 'settings') renderSettings();
   else renderHistory(param, extra);
 
   document.querySelectorAll('.tabbar a').forEach(a =>

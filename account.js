@@ -1,4 +1,4 @@
-// Account screen (#/account): sign in, sign out, and see sync status.
+// Settings tab (#/settings): sign in and sync, rest timer, backup.
 // Also draws the small sync indicator in the top-right corner.
 
 const syncBadge = document.getElementById('sync-badge');
@@ -32,11 +32,40 @@ function updateSyncBadge() {
 
 let accountMessage = '';
 
-function renderAccount() {
+function renderSettings() {
   drawAccount();
-  viewEl.insertAdjacentHTML('afterbegin', screenTitle('Account'));
-  viewEl.insertAdjacentHTML('beforeend', backupSectionHTML()); // from backup.js
+  viewEl.insertAdjacentHTML('afterbegin', '<h2 class="section-label">Sync</h2>');
+  viewEl.insertAdjacentHTML('beforeend', restSectionHTML() + backupSectionHTML() + aboutHTML());
 }
+const renderAccount = renderSettings; // the sign-in code below redraws with this name
+
+// Rest timer length: the same setting as the "Rest" button during a workout.
+const REST_LABELS = { 0: 'Off', 60: '1:00', 90: '1:30', 120: '2:00', 180: '3:00' };
+function restSectionHTML() {
+  const current = restSeconds(); // from workout.js
+  return `
+    <h2 class="section-label">Rest timer</h2>
+    <div class="card">
+      <p class="no-top muted small">Starts counting down when you tick off a set.</p>
+      <div class="seg" role="group" aria-label="Rest timer length">
+        ${[0, 60, 90, 120, 180].map(v => `
+          <button data-s-action="rest" data-v="${v}" class="${v === current ? 'on' : ''}" aria-pressed="${v === current}">${REST_LABELS[v]}</button>`).join('')}
+      </div>
+    </div>`;
+}
+
+function aboutHTML() {
+  return `<p class="muted small about">Rep Book · weights in pounds</p>`;
+}
+
+viewEl.addEventListener('click', e => {
+  const btn = e.target.closest('[data-s-action="rest"]');
+  if (!btn) return;
+  const v = Number(btn.dataset.v);
+  setRestSeconds(v);
+  if (!v) { restEndsAt = null; saveRestEnd(); }
+  renderSettings();
+});
 
 function drawAccount() {
   const s = Sync.status;
@@ -140,6 +169,8 @@ viewEl.addEventListener('click', async e => {
 Sync.onStatus(() => {
   updateSyncBadge();
   // Refresh the account screen if it's open (but not while typing in the form).
-  if (location.hash.startsWith('#/account') && !viewEl.querySelector('#auth-form')) renderAccount();
+  const onSettings = /^#\/(settings|account)/.test(location.hash);
+  // Redraw, except while you're filling in the sign-in form (unless you're now signed in).
+  if (onSettings && (Sync.user || !viewEl.querySelector('#auth-form'))) renderSettings();
 });
 updateSyncBadge();

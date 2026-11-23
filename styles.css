@@ -480,3 +480,8 @@ select {
 .home-hero .btn { margin-top: 14px; }
 .home-other { display: block; text-align: center; margin: 10px auto 0; }
 .home-best { color: var(--accent); font-weight: 700; white-space: nowrap; }
+
+/* Settings */
+.about { text-align: center; margin-top: 24px; }
+.seg button[data-s-action] { font-variant-numeric: tabular-nums; }
+.card > .seg:last-child { margin-bottom: 0; }
