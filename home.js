@@ -58,7 +58,13 @@ function renderHome() {
   if (a) {
     const mins = Math.floor((Date.now() - new Date(a.startedAt)) / 60000);
     const sets = a.exercises.flatMap(ex => ex.sets);
-    hero = `
+    hero = a.past ? `
+      <a class="card home-hero" href="#/workout">
+        <div class="stat-label">Logging a past workout</div>
+        <div class="home-hero-name">${esc(a.routineName)}</div>
+        <div class="muted">${longDate(a.startedAt)}</div>
+        <span class="btn block">Continue</span>
+      </a>` : `
       <a class="card home-hero" href="#/workout">
         <div class="stat-label">Workout in progress</div>
         <div class="home-hero-name">${esc(a.routineName)}</div>

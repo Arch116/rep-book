@@ -594,3 +594,20 @@ select {
 .effort-row .muted.small { line-height: 1.15; min-width: 64px; }
 .effort-row button.aimed { border-color: var(--accent-line); color: var(--text); }
 .hold-line { margin: 2px 0 6px; }
+
+/* Set options (tap a set number), drop sets, burnout finisher, date & time boxes */
+.log-row button.set-tag.static { border: 0; color: var(--text); font: inherit; font-weight: 600; cursor: pointer; padding: 0; }
+.set-tag.drop, .set-tag.static.drop { background: #3a2a10; color: var(--accent); }
+.set-menu { display: flex; flex-wrap: wrap; gap: 4px 18px; margin: -2px 0 10px; padding-left: 37px; }
+.set-menu .link-btn { padding: 4px 0; }
+.danger-text { color: var(--danger); }
+.card.exercise.finisher { border-color: var(--accent-line); }
+.link-btn.inline { padding: 0; font-size: inherit; }
+.times-form .field { margin-bottom: 10px; }
+.times-form input { width: 100%; }
+.times-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.times-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.past-btn { margin: 0 0 16px; }
+.past-name { font-weight: 600; font-size: 1.1rem; padding: 6px 10px; margin: 4px 0; }
+.times-form select { width: 100%; }
+.times-form .stat-label { margin-bottom: 10px; }

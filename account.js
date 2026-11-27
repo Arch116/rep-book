@@ -76,6 +76,14 @@ function workoutSettingsHTML() {
       ${st.askEffort ? `
         ${choices('effortEarly', [['1-2', '1–2'], ['2-3', '2–3'], ['3-4', '3–4']], st.effortEarly, 'Aim for these reps left on your first sets')}
         ${choices('effortLast', [['0-1', '0–1'], ['1-2', '1–2'], ['2-3', '2–3']], st.effortLast, 'And on your last set')}` : ''}
+      ${onOff('finisherOn', st.finisherOn, 'Finish every workout with a burnout set',
+        `Adds 1 set of ${esc(st.finisherName)} to the end of every workout: as many as you can. The goal goes up to one more than your best.`)}
+      ${st.finisherOn ? `
+        ${choices('finisherGoal', [10, 15, 20, 25, 30, 40, 50].map(v => [v, String(v)]), st.finisherGoal, 'Starting goal (reps)')}
+        <div class="setting">
+          <div class="setting-label">Exercise: ${esc(st.finisherName)}</div>
+          <button class="link-btn" data-finisher-name>Change exercise</button>
+        </div>` : ''}
     </div>`;
 }
 
@@ -153,6 +161,14 @@ function displaySettingsHTML() {
 function aboutHTML() {
   return `<p class="muted small about">Rep Book · weights in pounds<br>Settings sync between your devices, except text size.</p>`;
 }
+
+viewEl.addEventListener('click', e => {
+  if (!e.target.closest('[data-finisher-name]')) return;
+  const name = prompt('Which exercise for the burnout set?', Store.settings.finisherName)?.trim();
+  if (!name) return;
+  Store.setSetting('finisherName', name);
+  renderSettings();
+});
 
 viewEl.addEventListener('click', e => {
   const btn = e.target.closest('[data-setting], [data-plate]');

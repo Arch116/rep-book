@@ -10,7 +10,9 @@ const Store = (() => {
   // routines: [{ id, name, updatedAt, exercises: [{ id, name, type, sets: [{ warmup, reps, weight, seconds }] }] }]
   //   type is 'weight' | 'bodyweight' | 'time'
   // sessions: [{ id, routineId, routineName, startedAt, finishedAt, notes,
-  //              exercises: [{ id, name, type, note, sets: [{ warmup, target, reps, weight, seconds, done }] }] }]
+  //              exercises: [{ id, name, type, note, finisher, sets: [{ warmup, drop, target, reps, weight, seconds, done }] }] }]
+  //   sessions are kept in date order (oldest first), so "last time" means the latest date
+  //   drop: a lighter set added straight after one you couldn't finish
   // active: the workout in progress (same shape as a session), or null
   // activeChangedAt: when `active` last changed (so the newest device wins)
   // deleted: ids of deleted routines/workouts (so a deletion on one device
@@ -44,6 +46,9 @@ const Store = (() => {
     deloadPercent: 60,        // working-set weight during a lighter week
     deloadStartedAt: null,    // when the current/last lighter week began
     deloadSnoozedUntil: null, // "Not now" pushes the reminder back a week
+    finisherOn: false,        // add a burnout set to the end of every workout
+    finisherName: 'Decline push-ups',
+    finisherGoal: 25,         // starting goal; it rises to one more than your best
   };
 
   function load() {
@@ -56,6 +61,8 @@ const Store = (() => {
   }
 
   let data = load();
+  const byDate = (a, b) => a.startedAt.localeCompare(b.startedAt);
+  data.sessions.sort(byDate);
 
   // The rest timer used to be saved only on this device: carry it over once.
   try {
@@ -87,7 +94,7 @@ const Store = (() => {
 
     // Used by sync.js.
     getData() { return data; },
-    replaceData(next) { data = { ...empty(), ...next }; writeLocal(); },
+    replaceData(next) { data = { ...empty(), ...next }; data.sessions.sort(byDate); writeLocal(); },
     // Removes this device's copy (used when signing out). Your account keeps it.
     clearLocal() {
       data = empty();
@@ -185,16 +192,31 @@ const Store = (() => {
     // Moves the workout into history, keeping only sets that were ticked off.
     finishActive() {
       const s = data.active;
-      s.finishedAt = now();
+      // A past workout keeps the times you entered.
+      if (!s.past || !s.finishedAt) s.finishedAt = now();
+      delete s.past;
       s.exercises = s.exercises
         .filter(ex => !ex.skipped)
         .map(({ last, bump, progressNote, deload, showTools, skipped, ...ex }) => ({ ...ex, sets: ex.sets.filter(set => set.done) }))
         .filter(ex => ex.sets.length);
+      s.updatedAt = now();
       data.sessions.push(s);
+      data.sessions.sort(byDate);
       data.active = null;
       data.activeChangedAt = now();
       save();
       return s;
+    },
+
+    // Changes when a past workout started and finished.
+    setSessionTimes(sessionId, startedAt, finishedAt) {
+      const s = data.sessions.find(x => x.id === sessionId);
+      if (!s) return;
+      s.startedAt = startedAt;
+      s.finishedAt = finishedAt;
+      s.updatedAt = now();
+      data.sessions.sort(byDate);
+      save();
     },
 
     deleteSession(sessionId) {
@@ -203,7 +225,7 @@ const Store = (() => {
       save();
     },
 
-    // The most recent time this exercise was done (matched by id, then by name).
+    // The most recent time (by date) this exercise was done (matched by id, then by name).
     lastPerformance(exercise) {
       const name = exercise.name.trim().toLowerCase();
       for (let i = data.sessions.length - 1; i >= 0; i--) {

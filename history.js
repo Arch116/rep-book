@@ -12,7 +12,7 @@ function durationText(s) {
 // The standout set for an exercise: heaviest for weights, most reps for
 // bodyweight, longest for timed. Warm-ups don't count.
 function bestSet(ex) {
-  const sets = ex.sets.filter(s => !s.warmup);
+  const sets = ex.sets.filter(s => !s.warmup && !s.drop);
   const pool = sets.length ? sets : ex.sets;
   const score = s =>
     ex.type === 'time' ? (s.seconds || 0) :
@@ -29,6 +29,35 @@ function volume(session) {
     .reduce((sum, s) => sum + (s.reps || 0) * (s.weight || 0), 0);
 }
 
+/* ---------- Log a past workout ---------- */
+// For workouts done before you had the app: pick the day and times, then
+// fill in the sets on the workout screen.
+
+let loggingPast = false; // the "Log a past workout" box is open
+
+function pastFormHTML() {
+  if (!loggingPast) return '<button class="btn secondary block past-btn" data-h-action="log-past">+ Log a past workout</button>';
+  const yesterday = new Date(Date.now() - 864e5).toISOString();
+  return `
+    <div class="card times-form">
+      <div class="stat-label">Log a past workout</div>
+      <label class="field"><span>Routine</span>
+        <select data-past="routine">
+          ${Store.routines.map(r => `<option value="${r.id}">${esc(r.name)}</option>`).join('')}
+          <option value="">No routine (add exercises yourself)</option>
+        </select></label>
+      <label class="field"><span>Date</span><input type="date" data-past="date" value="${dateInput(yesterday)}" max="${dateInput(new Date().toISOString())}"></label>
+      <div class="times-row">
+        <label class="field"><span>Started</span><input type="time" data-past="start" value="18:00"></label>
+        <label class="field"><span>Finished</span><input type="time" data-past="end" value="19:00"></label>
+      </div>
+      <div class="times-actions">
+        <button class="btn" data-h-action="past-next">Add sets</button>
+        <button class="btn secondary" data-h-action="past-cancel">Cancel</button>
+      </div>
+    </div>`;
+}
+
 function renderHistory(sessionId, extra) {
   if (sessionId === 'progress') return renderProgress(extra);
   if (sessionId === 'records') return renderRecords();
@@ -40,11 +69,12 @@ function renderHistory(sessionId, extra) {
       <div class="empty">
         <p>No workouts yet.<br>Finish a workout and it will show up here.</p>
         <a class="btn" href="#/workout">Start a workout</a>
-      </div>`;
+      </div>
+      ${pastFormHTML()}`;
     return;
   }
 
-  let html = historySwitch('workouts') + calendarHTML(sessions);
+  let html = historySwitch('workouts') + calendarHTML(sessions) + pastFormHTML();
   let month = '';
   for (const s of sessions) {
     const m = monthLabel(s.startedAt);
@@ -52,7 +82,7 @@ function renderHistory(sessionId, extra) {
       html += `<h2 class="section-label">${m}</h2>`;
       month = m;
     }
-    const setCount = s.exercises.reduce((n, ex) => n + ex.sets.filter(x => !x.warmup).length, 0);
+    const setCount = s.exercises.reduce((n, ex) => n + ex.sets.filter(x => !x.warmup && !x.drop).length, 0);
     const highlights = s.exercises.map(ex => `${esc(ex.name)} ${fmtSet(ex.type, bestSet(ex))}`).join(' · ');
     html += `
       <a class="card routine-card" href="#/history/${s.id}">
@@ -68,6 +98,23 @@ function renderHistory(sessionId, extra) {
       </a>`;
   }
   viewEl.innerHTML = html;
+}
+
+let editingTimes = null; // id of the workout whose date and time are being changed
+
+function timesFormHTML(s) {
+  return `
+    <div class="card times-form">
+      <label class="field"><span>Date</span><input type="date" data-times="date" value="${dateInput(s.startedAt)}"></label>
+      <div class="times-row">
+        <label class="field"><span>Started</span><input type="time" data-times="start" value="${timeInput(s.startedAt)}"></label>
+        <label class="field"><span>Finished</span><input type="time" data-times="end" value="${s.finishedAt ? timeInput(s.finishedAt) : ''}"></label>
+      </div>
+      <div class="times-actions">
+        <button class="btn" data-h-action="save-times" data-id="${s.id}">Save</button>
+        <button class="btn secondary" data-h-action="cancel-times">Cancel</button>
+      </div>
+    </div>`;
 }
 
 function renderSessionDetail(sessionId) {
@@ -86,7 +133,7 @@ function renderSessionDetail(sessionId) {
     let working = 0;
     const rows = ex.sets.map(set => `
       <div class="detail-row ${isTime ? 'timed' : ''}">
-        <span class="set-tag static ${set.warmup ? 'warm' : ''}">${set.warmup ? 'W' : ++working}</span>
+        <span class="set-tag static ${set.warmup ? 'warm' : set.drop ? 'drop' : ''}">${set.warmup ? 'W' : set.drop ? 'D' : ++working}</span>
         ${isTime
           ? `<span>${set.seconds ?? '–'} sec</span><span>${set.weight ? `${set.weight} lbs` : ''}</span>`
           : `<span>${set.reps ?? '–'} reps</span><span>${ex.type === 'bodyweight'
@@ -105,7 +152,9 @@ function renderSessionDetail(sessionId) {
   viewEl.innerHTML = `
     <a class="back-link" href="#/history">‹ History</a>
     ${screenTitle(s.routineName)}
-    <p class="muted small hint">${stats}</p>
+    ${editingTimes === s.id ? timesFormHTML(s) : `
+      <p class="muted small hint">${stats}
+        <button class="link-btn inline" data-h-action="edit-times">Edit date &amp; time</button></p>`}
     ${s.notes ? `<div class="card"><div class="muted small">Notes</div><div class="note-text">${esc(s.notes)}</div></div>` : ''}
     ${cards}
     <div class="editor-actions">
@@ -114,11 +163,53 @@ function renderSessionDetail(sessionId) {
 }
 
 viewEl.addEventListener('click', e => {
-  const btn = e.target.closest('[data-h-action="delete"]');
+  const btn = e.target.closest('[data-h-action]');
   if (!btn) return;
-  if (!confirm('Delete this workout from your history? This can’t be undone.')) return;
-  Store.deleteSession(btn.dataset.id);
-  location.hash = '#/history';
+  const action = btn.dataset.hAction;
+  if (action === 'delete') {
+    if (!confirm('Delete this workout from your history? This can’t be undone.')) return;
+    Store.deleteSession(btn.dataset.id);
+    location.hash = '#/history';
+    return;
+  }
+  if (action === 'log-past' || action === 'past-cancel') {
+    if (action === 'log-past' && Store.active) {
+      return alert('Finish or discard the workout in progress first.');
+    }
+    loggingPast = action === 'log-past';
+    return route({ keepScroll: true });
+  }
+  if (action === 'past-next') {
+    const val = k => viewEl.querySelector(`[data-past="${k}"]`).value;
+    const date = val('date'), start = val('start'), end = val('end');
+    if (!date || !start) return alert('Enter a date and a start time.');
+    const startedAt = fromInputs(date, start);
+    let finishedAt = end ? fromInputs(date, end) : startedAt;
+    if (finishedAt < startedAt) finishedAt = new Date(new Date(finishedAt).getTime() + 864e5).toISOString();
+    if (new Date(startedAt) > new Date()) return alert('That time hasn’t happened yet. Pick a past date and time.');
+    loggingPast = false;
+    startPastWorkout(val('routine'), startedAt, finishedAt);
+    location.hash = '#/workout';
+    return;
+  }
+  if (action === 'edit-times' || action === 'cancel-times') {
+    const id = location.hash.split('/')[2];
+    editingTimes = action === 'edit-times' ? id : null;
+    return route({ keepScroll: true });
+  }
+  if (action === 'save-times') {
+    const val = k => viewEl.querySelector(`[data-times="${k}"]`).value;
+    const date = val('date'), start = val('start'), end = val('end');
+    if (!date || !start) return alert('Enter a date and a start time.');
+    const startedAt = fromInputs(date, start);
+    let finishedAt = end ? fromInputs(date, end) : null;
+    // Finished "earlier" than it started means it went past midnight.
+    if (finishedAt && finishedAt < startedAt) finishedAt = new Date(new Date(finishedAt).getTime() + 864e5).toISOString();
+    if (new Date(startedAt) > new Date()) return alert('The start time can’t be in the future.');
+    Store.setSessionTimes(btn.dataset.id, startedAt, finishedAt);
+    editingTimes = null;
+    route({ keepScroll: true });
+  }
 });
 
 /* ---------- Calendar ---------- */
